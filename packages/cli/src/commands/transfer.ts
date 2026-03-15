@@ -6,6 +6,12 @@ import { output, outputSuccess, outputError } from "../output.js";
 export const exportCommand = new Command("export")
   .description("Export all configuration (sources, destinations, subscriptions)")
   .option("-o, --output <file>", "Write to file instead of stdout")
+  .addHelpText("after", `
+Examples:
+  $ hookflare export                          # print JSON to stdout
+  $ hookflare export -o backup.json           # save to file
+  $ hookflare export | hookflare import \\
+      --target https://other.instance.com     # pipe to another instance`)
   .action(async (opts) => {
     const client = new HookflareClient();
     const res = await client.exportConfig();
@@ -24,6 +30,18 @@ export const importCommand = new Command("import")
   .option("-f, --file <file>", "Read from file")
   .option("--target <url>", "Target instance URL (overrides configured api_url)")
   .option("--target-key <key>", "Target instance API key")
+  .addHelpText("after", `
+Examples:
+  $ hookflare import -f backup.json           # import from file
+  $ cat backup.json | hookflare import        # import from stdin
+  $ hookflare import -f backup.json \\
+      --target https://acme.hookedge.dev \\
+      --target-key hf_sk_xxx                  # import to a different instance
+
+Behavior:
+  - Existing resources (matched by name) are skipped, not overwritten
+  - Subscription IDs are re-linked to the new source/destination IDs
+  - API keys are NOT imported — create new keys on the target instance`)
   .action(async (opts) => {
     let raw: string;
 
@@ -70,6 +88,17 @@ export const migrateCommand = new Command("migrate")
   .requiredOption("--from-key <key>", "Source instance API key")
   .requiredOption("--to <url>", "Target instance URL")
   .requiredOption("--to-key <key>", "Target instance API key")
+  .addHelpText("after", `
+Examples:
+  # Self-hosted → hookedge managed
+  $ hookflare migrate \\
+      --from http://localhost:8787 --from-key hf_sk_old \\
+      --to https://acme.hookedge.dev --to-key hf_sk_new
+
+  # hookedge managed → self-hosted (reverse migration)
+  $ hookflare migrate \\
+      --from https://acme.hookedge.dev --from-key hf_sk_old \\
+      --to http://my-server.com --to-key hf_sk_new`)
   .action(async (opts) => {
     // 1. Export from source
     const sourceClient = new HookflareClient({
