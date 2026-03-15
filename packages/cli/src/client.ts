@@ -128,6 +128,15 @@ export class HookflareClient {
     return this.request("POST", `/api/v1/events/${id}/replay`);
   }
 
+  // Transfer (export/import)
+  exportConfig() {
+    return this.request("GET", "/api/v1/export");
+  }
+
+  importConfig(data: unknown) {
+    return this.request("POST", "/api/v1/import", { data });
+  }
+
   // Health
   health() {
     return this.request("GET", "/health");

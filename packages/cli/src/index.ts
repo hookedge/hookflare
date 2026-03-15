@@ -5,6 +5,7 @@ import { sourcesCommand } from "./commands/sources.js";
 import { destinationsCommand } from "./commands/destinations.js";
 import { subscriptionsCommand } from "./commands/subscriptions.js";
 import { eventsCommand } from "./commands/events.js";
+import { exportCommand, importCommand, migrateCommand } from "./commands/transfer.js";
 import { HookflareClient } from "./client.js";
 
 const program = new Command();
@@ -35,6 +36,9 @@ program.addCommand(sourcesCommand);
 program.addCommand(destinationsCommand);
 program.addCommand(subscriptionsCommand);
 program.addCommand(eventsCommand);
+program.addCommand(exportCommand);
+program.addCommand(importCommand);
+program.addCommand(migrateCommand);
 
 // Global error handler
 program.exitOverride();
