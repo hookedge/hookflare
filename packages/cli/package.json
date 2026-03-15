@@ -1,0 +1,20 @@
+{
+  "name": "@hookflare/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "hookflare": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hookflare/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.0",
+    "tsx": "^4.19.0"
+  }
+}

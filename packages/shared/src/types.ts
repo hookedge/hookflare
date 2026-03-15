@@ -1,29 +1,5 @@
-// Cloudflare bindings
-export interface Env {
-  DB: D1Database;
-  WEBHOOK_QUEUE: Queue<QueueMessage>;
-  IDEMPOTENCY_KV: KVNamespace;
-  PAYLOAD_BUCKET: R2Bucket;
-  DELIVERY_DO: DurableObjectNamespace;
-  RETRY_MAX_ATTEMPTS: string;
-  RETRY_BACKOFF_BASE_MS: string;
-  RETRY_BACKOFF_MAX_MS: string;
-  IDEMPOTENCY_TTL_S: string;
-  PAYLOAD_ARCHIVE_DAYS: string;
-  DELIVERY_TIMEOUT_MS: string;
-}
+// API entity types — shared between worker and CLI
 
-// Queue message payload
-export interface QueueMessage {
-  eventId: string;
-  sourceId: string;
-  eventType: string | null;
-  payloadR2Key: string;
-  headers: Record<string, string>;
-  receivedAt: string;
-}
-
-// Database row types
 export interface Source {
   id: string;
   name: string;
@@ -76,19 +52,4 @@ export interface Delivery {
   next_retry_at: string | null;
   created_at: string;
   updated_at: string;
-}
-
-// Delivery DO message
-export interface DeliveryTask {
-  deliveryId: string;
-  eventId: string;
-  destinationId: string;
-  destinationUrl: string;
-  payloadR2Key: string;
-  headers: Record<string, string>;
-  attempt: number;
-  maxRetries: number;
-  timeoutMs: number;
-  backoffBaseMs: number;
-  backoffMaxMs: number;
 }
