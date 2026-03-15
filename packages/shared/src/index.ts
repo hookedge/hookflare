@@ -4,4 +4,6 @@ export type {
   Subscription,
   Event,
   Delivery,
+  ExportData,
+  ImportResult,
 } from "./types";

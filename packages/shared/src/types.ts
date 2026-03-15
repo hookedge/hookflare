@@ -41,6 +41,22 @@ export interface Event {
   received_at: string;
 }
 
+// Export/Import format — used by CLI migrate, export, import commands
+export interface ExportData {
+  version: "1";
+  exported_at: string;
+  instance_url?: string;
+  sources: Source[];
+  destinations: Destination[];
+  subscriptions: Subscription[];
+}
+
+export interface ImportResult {
+  sources: { created: number; skipped: number };
+  destinations: { created: number; skipped: number };
+  subscriptions: { created: number; skipped: number };
+}
+
 export interface Delivery {
   id: string;
   event_id: string;
