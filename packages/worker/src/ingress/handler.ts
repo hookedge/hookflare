@@ -1,8 +1,7 @@
 import type { Context } from "hono";
 import type { Env, QueueMessage } from "../lib/types";
 import { generateId } from "../lib/id";
-import { getSource } from "../db/queries";
-import { createEvent } from "../db/queries";
+import { createDb, getSource, createEvent } from "../db/queries";
 import { verifyHmacSignature } from "../lib/crypto";
 import { ApiError } from "../lib/errors";
 
@@ -20,9 +19,10 @@ import { ApiError } from "../lib/errors";
 export async function handleWebhookIngress(c: Context<{ Bindings: Env }>) {
   const sourceId = c.req.param("source_id")!;
   const env = c.env;
+  const db = createDb(env.DB);
 
   // 1. Look up source
-  const source = await getSource(env.DB, sourceId);
+  const source = await getSource(db, sourceId);
   if (!source) {
     throw new ApiError(404, `Source not found: ${sourceId}`, "SOURCE_NOT_FOUND");
   }
@@ -94,7 +94,7 @@ export async function handleWebhookIngress(c: Context<{ Bindings: Env }>) {
   }
 
   // 5. Record event in D1
-  await createEvent(env.DB, {
+  await createEvent(db, {
     id: eventId,
     source_id: sourceId,
     event_type: eventType,
