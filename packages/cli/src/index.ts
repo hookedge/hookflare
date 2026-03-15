@@ -12,7 +12,7 @@ const program = new Command();
 program
   .name("hookflare")
   .description("CLI for hookflare — open-source webhook infrastructure")
-  .version("0.1.0")
+  .version("0.0.1")
   .option("--json", "Output in JSON format (agent-friendly)")
   .hook("preAction", (thisCommand) => {
     const opts = thisCommand.optsWithGlobals();
