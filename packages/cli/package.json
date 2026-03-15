@@ -1,20 +1,40 @@
 {
-  "name": "@hookflare/cli",
+  "name": "hookflare",
   "version": "0.1.0",
+  "description": "CLI for hookflare — open-source webhook infrastructure",
   "type": "module",
   "bin": {
     "hookflare": "dist/index.js"
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsup",
     "dev": "tsx src/index.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@hookflare/shared": "workspace:*"
+    "@hookflare/shared": "workspace:*",
+    "commander": "^13.1.0"
   },
   "devDependencies": {
-    "typescript": "^5.8.0",
-    "tsx": "^4.19.0"
-  }
+    "@types/node": "^22.0.0",
+    "tsup": "^8.4.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.8.0"
+  },
+  "keywords": [
+    "webhook",
+    "hookflare",
+    "cloudflare",
+    "cli"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hookedge/hookflare",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/hookedge/hookflare"
 }
