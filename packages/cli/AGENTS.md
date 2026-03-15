@@ -2,6 +2,12 @@
 
 This file contains instructions for AI agents operating the hookflare CLI.
 
+## First Steps
+
+1. Discover available resources: `hookflare schema`
+2. Inspect a specific resource: `hookflare schema sources`
+3. Check connectivity: `hookflare health --json`
+
 ## Authentication
 
 Before any API call, configure the connection:
@@ -19,8 +25,20 @@ Or pass inline: every command respects the configured `api_url` and `token`.
 - Always use `--dry-run` before mutations (create, delete) to validate first
 - Always use `--data` (raw JSON) for create commands instead of individual flags
 - Always use `--fields` on list commands to limit output to needed columns
+- Always run `hookflare schema <resource>` to discover fields before creating resources
 - Never delete resources without confirming with the user first
 - Never pass secrets in resource names or IDs
+
+## Key Agent-Friendly Features
+
+| Feature | Flag/Command | Purpose |
+|---|---|---|
+| Structured output | `--json` | Machine-parseable JSON on all commands |
+| Raw JSON input | `-d / --data` | Send full API payload, skip flag mapping |
+| Schema introspection | `hookflare schema` | Discover API resources and fields at runtime |
+| Dry run | `--dry-run` | Validate mutations without executing |
+| Field selection | `--fields` | Limit output columns, save context tokens |
+| Export/Import | `hookflare export/import` | Pipe-friendly config transfer |
 
 ## Common Workflows
 

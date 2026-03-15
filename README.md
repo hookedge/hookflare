@@ -202,45 +202,88 @@ Each destination can override the default retry policy.
 |---|---|---|
 | `POST` | `/webhooks/:source_id` | Ingest a webhook from a source |
 
+## CLI
+
+hookflare ships with an agent-optimized CLI. Install it globally:
+
+```bash
+npm i -g hookflare
+```
+
+### Agent-Friendly Features
+
+The CLI is designed as an **agent-first** interface — AI agents can operate hookflare without reading documentation:
+
+| Feature | Flag/Command | Purpose |
+|---|---|---|
+| Structured output | `--json` | Machine-parseable JSON on all commands |
+| Raw JSON input | `-d / --data` | Send full API payload, skip flag mapping |
+| Schema introspection | `hookflare schema` | Discover API resources and fields at runtime |
+| Dry run | `--dry-run` | Validate mutations without executing |
+| Field selection | `--fields` | Limit output columns, save context tokens |
+| Export/Import | `hookflare export/import` | Pipe-friendly config transfer |
+| Migrate | `hookflare migrate` | One-command instance-to-instance migration |
+
+```bash
+# Agent workflow: discover → validate → execute
+hookflare schema sources                                          # discover fields
+hookflare sources create --json --dry-run -d '{"name":"stripe"}'  # validate
+hookflare sources create --json -d '{"name":"stripe"}'            # execute
+```
+
+See [`packages/cli/AGENTS.md`](packages/cli/AGENTS.md) for the full agent guide.
+
 ## Development
 
 ```bash
 # Install dependencies
-npm install
+pnpm install
+
+# Build shared types (required first)
+pnpm --filter @hookflare/shared build
 
 # Start local dev server
-npm run dev
+pnpm --filter @hookflare/worker dev
 
 # Run tests
-npm test
+pnpm --filter @hookflare/worker test
 
 # Run D1 migrations locally
-npm run db:migrate:local
+pnpm --filter @hookflare/worker db:migrate:local
 
 # Type check
-npm run typecheck
+pnpm --filter @hookflare/worker typecheck
 
-# Lint
-npm run lint
+# Build CLI
+pnpm --filter hookflare build
 ```
 
 ## Project Structure
 
 ```
 hookflare/
-├── src/
-│   ├── index.ts              # Worker entry point and router
-│   ├── ingress/              # Webhook ingestion and verification
-│   ├── queue/                # Queue consumer and dispatch logic
-│   ├── delivery/             # Durable Object for retry management
-│   ├── api/                  # REST API handlers
-│   ├── db/                   # D1 schema, queries, and migrations
-│   └── lib/                  # Shared utilities (crypto, errors, etc.)
-├── migrations/               # D1 database migrations
-├── test/                     # Test files
-├── wrangler.jsonc            # Cloudflare Workers configuration
-├── package.json
-└── tsconfig.json
+├── packages/
+│   ├── worker/                  # Cloudflare Worker (webhook engine)
+│   │   ├── src/
+│   │   │   ├── index.ts         # Worker entry point and Hono router
+│   │   │   ├── auth/            # API key authentication middleware
+│   │   │   ├── ingress/         # Webhook ingestion and signature verification
+│   │   │   ├── queue/           # Queue consumer and dispatch logic
+│   │   │   ├── delivery/        # Durable Object for retry management
+│   │   │   ├── api/             # REST API handlers
+│   │   │   ├── db/              # Drizzle ORM schema and queries
+│   │   │   └── lib/             # Shared utilities (crypto, errors, IDs)
+│   │   ├── migrations/          # D1 database migrations
+│   │   ├── test/                # Integration tests (vitest + Workers runtime)
+│   │   └── wrangler.jsonc       # Cloudflare Workers configuration
+│   ├── shared/                  # Shared TypeScript types
+│   └── cli/                     # CLI tool (npm: hookflare)
+│       ├── src/commands/        # Command implementations
+│       ├── AGENTS.md            # Agent skill file
+│       └── tsup.config.ts       # Bundle config
+├── turbo.json                   # Turborepo task config
+├── pnpm-workspace.yaml          # pnpm workspaces
+└── LICENSE                      # Apache 2.0
 ```
 
 ## Comparisons
@@ -253,6 +296,9 @@ hookflare/
 | Incoming + Outgoing | Yes | Outgoing only | Both | Incoming only |
 | Idle cost | $0 | VM cost | VM cost | Free tier |
 | Global edge | Yes (300+ PoPs) | No | No | Yes |
+| Agent-optimized CLI | Yes | No | No | No |
+| Schema introspection | Yes | No | No | No |
+| Export/Import/Migrate | Yes | Partial | Partial | No |
 
 ## License
 

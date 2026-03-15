@@ -18,7 +18,21 @@ program
   .hook("preAction", (thisCommand) => {
     const opts = thisCommand.optsWithGlobals();
     if (opts.json) setJsonMode(true);
-  });
+  })
+  .addHelpText("after", `
+Agent-Friendly Features:
+  --json              Structured JSON output on all commands
+  -d, --data <json>   Raw JSON input on create commands (skips flag mapping)
+  --dry-run           Validate mutations without executing
+  --fields            Limit list output to specific columns
+  schema [resource]   Discover API resources and fields at runtime
+
+Getting started (agent):
+  $ hookflare schema                            # discover all resources
+  $ hookflare schema sources                    # inspect source fields
+  $ hookflare health --json                     # check connectivity
+
+See AGENTS.md for the full agent guide.`);
 
 // Health check
 program
