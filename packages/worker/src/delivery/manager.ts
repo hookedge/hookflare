@@ -1,5 +1,5 @@
 import type { Env, DeliveryTask } from "../lib/types";
-import { updateDelivery } from "../db/queries";
+import { createDb, updateDelivery } from "../db/queries";
 
 /**
  * DeliveryManager Durable Object
@@ -73,7 +73,7 @@ export class DeliveryManager implements DurableObject {
 
       if (response.ok) {
         // Success
-        await updateDelivery(this.env.DB, task.deliveryId, {
+        await updateDelivery(createDb(this.env.DB), task.deliveryId, {
           status: "success",
           attempt: task.attempt,
           status_code: response.status,
@@ -102,7 +102,7 @@ export class DeliveryManager implements DurableObject {
 
     if (task.attempt >= task.maxRetries) {
       // Exhausted retries — move to DLQ
-      await updateDelivery(this.env.DB, task.deliveryId, {
+      await updateDelivery(createDb(this.env.DB), task.deliveryId, {
         status: "dlq",
         attempt: task.attempt,
         status_code: statusCode || null,
@@ -123,7 +123,7 @@ export class DeliveryManager implements DurableObject {
     const nextRetryAt = new Date(Date.now() + nextRetryMs);
 
     // Update delivery record
-    await updateDelivery(this.env.DB, task.deliveryId, {
+    await updateDelivery(createDb(this.env.DB), task.deliveryId, {
       status: "failed",
       attempt: task.attempt,
       status_code: statusCode || null,

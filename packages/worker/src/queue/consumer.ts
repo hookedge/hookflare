@@ -1,7 +1,6 @@
 import type { Env, QueueMessage, DeliveryTask } from "../lib/types";
 import { generateId } from "../lib/id";
-import { getSubscriptionsBySource } from "../db/queries";
-import { getDestination, createDelivery } from "../db/queries";
+import { createDb, getSubscriptionsBySource, getDestination, createDelivery } from "../db/queries";
 
 /**
  * Queue consumer: reads webhook events from the queue,
@@ -24,8 +23,10 @@ export async function handleQueueBatch(
 }
 
 async function processMessage(msg: QueueMessage, env: Env): Promise<void> {
+  const db = createDb(env.DB);
+
   // Find all active subscriptions for this source
-  const subscriptions = await getSubscriptionsBySource(env.DB, msg.sourceId);
+  const subscriptions = await getSubscriptionsBySource(db, msg.sourceId);
 
   for (const sub of subscriptions) {
     // Check event type filter
@@ -34,12 +35,12 @@ async function processMessage(msg: QueueMessage, env: Env): Promise<void> {
     }
 
     // Look up destination
-    const dest = await getDestination(env.DB, sub.destination_id);
+    const dest = await getDestination(db, sub.destination_id);
     if (!dest) continue;
 
     // Create delivery record
     const deliveryId = generateId("dlv");
-    await createDelivery(env.DB, {
+    await createDelivery(db, {
       id: deliveryId,
       event_id: msg.eventId,
       destination_id: dest.id,

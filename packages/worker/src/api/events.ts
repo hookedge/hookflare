@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import type { Env } from "../lib/types";
 import { notFound } from "../lib/errors";
+import { createDb } from "../db/queries";
 import * as db from "../db/queries";
 
 const app = new Hono<{ Bindings: Env }>();
@@ -10,12 +11,12 @@ app.get("/", async (c) => {
   const limit = parseInt(c.req.query("limit") ?? "50", 10);
   const offset = parseInt(c.req.query("offset") ?? "0", 10);
 
-  const events = await db.listEvents(c.env.DB, { sourceId, limit, offset });
+  const events = await db.listEvents(createDb(c.env.DB), { sourceId, limit, offset });
   return c.json({ data: events });
 });
 
 app.get("/:id", async (c) => {
-  const event = await db.getEvent(c.env.DB, c.req.param("id"));
+  const event = await db.getEvent(createDb(c.env.DB), c.req.param("id"));
   if (!event) throw notFound("Event not found");
 
   // Fetch payload from R2 if available
@@ -30,16 +31,16 @@ app.get("/:id", async (c) => {
 
 app.get("/:id/deliveries", async (c) => {
   const eventId = c.req.param("id");
-  const event = await db.getEvent(c.env.DB, eventId);
+  const event = await db.getEvent(createDb(c.env.DB), eventId);
   if (!event) throw notFound("Event not found");
 
-  const deliveries = await db.getDeliveriesByEvent(c.env.DB, eventId);
+  const deliveries = await db.getDeliveriesByEvent(createDb(c.env.DB), eventId);
   return c.json({ data: deliveries });
 });
 
 app.post("/:id/replay", async (c) => {
   const eventId = c.req.param("id");
-  const event = await db.getEvent(c.env.DB, eventId);
+  const event = await db.getEvent(createDb(c.env.DB), eventId);
   if (!event) throw notFound("Event not found");
 
   // Re-enqueue the event

@@ -2,17 +2,18 @@ import { Hono } from "hono";
 import type { Env } from "../lib/types";
 import { generateId } from "../lib/id";
 import { badRequest, notFound } from "../lib/errors";
+import { createDb } from "../db/queries";
 import * as db from "../db/queries";
 
 const app = new Hono<{ Bindings: Env }>();
 
 app.get("/", async (c) => {
-  const destinations = await db.listDestinations(c.env.DB);
+  const destinations = await db.listDestinations(createDb(c.env.DB));
   return c.json({ data: destinations });
 });
 
 app.get("/:id", async (c) => {
-  const dest = await db.getDestination(c.env.DB, c.req.param("id"));
+  const dest = await db.getDestination(createDb(c.env.DB), c.req.param("id"));
   if (!dest) throw notFound("Destination not found");
   return c.json({ data: dest });
 });
@@ -33,7 +34,7 @@ app.post("/", async (c) => {
   if (!body.url) throw badRequest("url is required");
 
   const id = generateId("dst");
-  await db.createDestination(c.env.DB, {
+  await db.createDestination(createDb(c.env.DB), {
     id,
     name: body.name,
     url: body.url,
@@ -43,13 +44,13 @@ app.post("/", async (c) => {
     backoff_max_ms: body.retry_policy?.backoff_max_ms ?? 86400000,
   });
 
-  const dest = await db.getDestination(c.env.DB, id);
+  const dest = await db.getDestination(createDb(c.env.DB), id);
   return c.json({ data: dest }, 201);
 });
 
 app.put("/:id", async (c) => {
   const id = c.req.param("id");
-  const existing = await db.getDestination(c.env.DB, id);
+  const existing = await db.getDestination(createDb(c.env.DB), id);
   if (!existing) throw notFound("Destination not found");
 
   const body = await c.req.json<{
@@ -63,7 +64,7 @@ app.put("/:id", async (c) => {
     };
   }>();
 
-  await db.updateDestination(c.env.DB, id, {
+  await db.updateDestination(createDb(c.env.DB), id, {
     name: body.name,
     url: body.url,
     timeout_ms: body.retry_policy?.timeout_ms,
@@ -72,16 +73,16 @@ app.put("/:id", async (c) => {
     backoff_max_ms: body.retry_policy?.backoff_max_ms,
   });
 
-  const dest = await db.getDestination(c.env.DB, id);
+  const dest = await db.getDestination(createDb(c.env.DB), id);
   return c.json({ data: dest });
 });
 
 app.delete("/:id", async (c) => {
   const id = c.req.param("id");
-  const existing = await db.getDestination(c.env.DB, id);
+  const existing = await db.getDestination(createDb(c.env.DB), id);
   if (!existing) throw notFound("Destination not found");
 
-  await db.deleteDestination(c.env.DB, id);
+  await db.deleteDestination(createDb(c.env.DB), id);
   return c.json({ message: "Deleted" });
 });
 

@@ -1,4 +1,5 @@
 // API entity types — shared between worker and CLI
+// These match the D1/Drizzle schema but are framework-agnostic
 
 export interface Source {
   id: string;
@@ -25,7 +26,7 @@ export interface Subscription {
   id: string;
   source_id: string;
   destination_id: string;
-  event_types: string; // JSON array
+  event_types: string;
   enabled: number;
   created_at: string;
 }
@@ -36,7 +37,7 @@ export interface Event {
   event_type: string | null;
   idempotency_key: string | null;
   payload_r2_key: string | null;
-  headers: string | null; // JSON object
+  headers: string | null;
   received_at: string;
 }
 
