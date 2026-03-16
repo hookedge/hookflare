@@ -5,6 +5,10 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   check:
     name: Typecheck & Test
@@ -14,7 +18,7 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Build shared
@@ -28,38 +32,17 @@ jobs:
     name: Publish hookflare CLI
     needs: check
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
     steps:
       - uses: actions/checkout@v4
-
       - uses: pnpm/action-setup@v4
-
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: pnpm
+          node-version: 24
           registry-url: 'https://registry.npmjs.org'
-
       - run: pnpm install --frozen-lockfile
-
       - name: Build shared
         run: pnpm --filter @hookflare/shared build
-
       - name: Build CLI
         run: pnpm --filter hookflare build
-
-      - name: Get npm OIDC token
-        id: npm-token
-        run: |
-          OIDC_TOKEN=$(curl -sLS "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=https://registry.npmjs.org" -H "User-Agent: actions/oidc-client" -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" | jq -r '.value')
-          NPM_TOKEN=$(curl -sLS 'https://registry.npmjs.org/-/npm/v1/security/oidc/token' -H "Content-Type: application/json" -d "{\"token\":\"$OIDC_TOKEN\"}" | jq -r '.token')
-          echo "::add-mask::$NPM_TOKEN"
-          echo "NPM_TOKEN=$NPM_TOKEN" >> "$GITHUB_OUTPUT"
-
-      - name: Publish with provenance
-        run: npm publish --provenance --access public
+      - run: npm publish --access public
         working-directory: packages/cli
-        env:
-          NODE_AUTH_TOKEN: ${{ steps.npm-token.outputs.NPM_TOKEN }}
