@@ -10,7 +10,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Cloudflare Workers](https://img.shields.io/badge/Cloudflare%20Workers-F38020?logo=cloudflare&logoColor=white)](https://workers.cloudflare.com/)
 
-> **Status: Alpha** — Core engine is stable and tested. Provider system and `connect` command are [in development](#roadmap).
+> **Status: Alpha** — Fully functional and tested. Not yet proven in production. See [Status](#status) for details.
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/hookedge/hookflare)
 
@@ -18,13 +18,12 @@
 
 Webhooks are deceptively simple — until they aren't. Providers send them once and move on. If your server is down, slow, or returns an error, that event is gone. hookflare sits between webhook sources and your application to make sure **nothing gets lost**.
 
+- **Built-in providers** — Stripe, GitHub, Slack, Shopify, Vercel out of the box. Each provider includes signature verification, typed event catalogs, and setup instructions. Community-extensible via [`defineProvider()`](packages/providers/DESIGN.md) — one file, three fields.
 - **Never miss a webhook** — Incoming payloads are immediately queued at the edge before your backend even processes them.
-- **Reliable delivery** — Automatic retries with exponential backoff, configurable per destination.
-- **Signature verification** — Native Stripe (`t=,v1=` format), GitHub (`x-hub-signature-256`), and generic HMAC schemes.
-- **Idempotency** — Built-in deduplication so duplicate deliveries don't cause duplicate side effects.
-- **Circuit breaker** — Auto-pauses delivery to unhealthy destinations, probes for recovery.
+- **Reliable delivery** — Automatic retries with exponential backoff, configurable per destination. Circuit breaker auto-pauses unhealthy destinations.
 - **Zero infrastructure** — No Docker, PostgreSQL, or Redis. Runs entirely on Cloudflare Workers.
 - **Free to start** — Runs on Cloudflare's free tier (~50K events/day). No VM costs, $0 idle.
+- **Agent-optimized** — CLI with `--json`, `--dry-run`, schema introspection, and provider discovery. AI agents operate hookflare without reading docs.
 
 ## Status
 
