@@ -10,6 +10,7 @@ export type {
 export interface Env {
   DB: D1Database;
   API_TOKEN?: string; // Simple mode: single env var token
+  DLQ_NOTIFICATION_URL?: string; // Webhook URL for DLQ alerts
   WEBHOOK_QUEUE: Queue<QueueMessage>;
   IDEMPOTENCY_KV: KVNamespace;
   PAYLOAD_BUCKET: R2Bucket;

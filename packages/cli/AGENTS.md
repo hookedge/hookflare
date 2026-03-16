@@ -85,6 +85,31 @@ hookflare subs ls [--json]
 hookflare events ls [--json] [--source <id>] [--limit <n>]
 hookflare events get <id> [--json]
 hookflare events replay <id>
+hookflare tail [--json] [--source <id>]    # real-time event stream
+```
+
+### DLQ notifications
+
+Set `DLQ_NOTIFICATION_URL` environment variable to receive a webhook when deliveries permanently fail:
+
+```bash
+wrangler secret put DLQ_NOTIFICATION_URL
+# Enter: https://hooks.slack.com/services/xxx (or any webhook URL)
+```
+
+Notification payload:
+```json
+{
+  "type": "delivery.dlq",
+  "delivery_id": "dlv_xxx",
+  "event_id": "evt_xxx",
+  "destination_id": "dst_xxx",
+  "destination_url": "https://...",
+  "attempt": 10,
+  "last_status_code": 500,
+  "last_response": "Internal Server Error",
+  "timestamp": "2026-03-16T..."
+}
 ```
 
 ### System

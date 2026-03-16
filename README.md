@@ -48,6 +48,9 @@ Webhooks are deceptively simple — until they aren't. Providers send them once 
 | `hookflare providers` (provider catalog) | ✅ Stable | Browse providers and event types |
 | Pre-built providers (Stripe, GitHub, Slack, Shopify, Vercel) | ✅ Stable | Event catalogs, verification, presets |
 | `defineProvider()` (community providers) | ✅ Stable | One file, three fields, publish to npm or GitHub |
+| SSRF protection on destination URLs | ✅ Stable | Blocks private IPs, localhost, non-HTTPS |
+| Payload size limit (256KB) | ✅ Stable | Returns 413 on oversized webhooks |
+| DLQ notifications | ✅ Stable | Webhook callback when deliveries permanently fail |
 | Dashboard (static SPA) | 📋 Planned | Cloudflare Pages, connects to any instance |
 | DLQ notifications (webhook/email) | 📋 Planned | Alert when deliveries fail permanently |
 | Structured logging | 📋 Planned | JSON logs for observability |
@@ -392,9 +395,9 @@ Webhook ingestion, queue-based delivery, configurable retry strategies, circuit 
 - Built-in Stripe, GitHub, Slack, Shopify, Vercel providers with event type catalogs
 - Community-extensible via `defineProvider()` — one file, three fields, publish to npm or GitHub
 
-### v0.3 — Observability
+### v0.3 — Observability (current)
 
-Structured JSON logging, DLQ notifications (webhook callbacks), health check improvements, delivery metrics.
+DLQ notifications via webhook callback (✅ done), structured JSON logging, delivery metrics, Cloudflare Logpush integration.
 
 ### v0.4 — Dashboard
 

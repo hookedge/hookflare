@@ -3,6 +3,7 @@ import { createDb, updateDelivery } from "../db/queries";
 import { calculateRetryDelay, shouldRetryStatus } from "./retry";
 import type { RetryConfig } from "./retry";
 import { CircuitBreaker } from "./circuit-breaker";
+import { sendDlqNotification } from "./notify";
 
 /**
  * DeliveryManager Durable Object
@@ -116,6 +117,21 @@ export class DeliveryManager implements DurableObject {
             response_body: responseBody,
           });
           await this.state.storage.delete(key);
+
+          sendDlqNotification(
+            this.env.DLQ_NOTIFICATION_URL,
+            {
+              type: "delivery.dlq",
+              delivery_id: task.deliveryId,
+              event_id: task.eventId,
+              destination_id: task.destinationId,
+              destination_url: task.destinationUrl,
+              attempt: task.attempt,
+              last_status_code: response.status,
+              last_response: responseBody,
+              timestamp: new Date().toISOString(),
+            },
+          );
           return;
         }
 
@@ -153,6 +169,22 @@ export class DeliveryManager implements DurableObject {
         response_body: responseBody,
       });
       await this.state.storage.delete(key);
+
+      // Send DLQ notification (fire-and-forget)
+      sendDlqNotification(
+        this.env.DLQ_NOTIFICATION_URL,
+        {
+          type: "delivery.dlq",
+          delivery_id: task.deliveryId,
+          event_id: task.eventId,
+          destination_id: task.destinationId,
+          destination_url: task.destinationUrl,
+          attempt: task.attempt,
+          last_status_code: statusCode || null,
+          last_response: responseBody,
+          timestamp: new Date().toISOString(),
+        },
+      );
       return;
     }
 
