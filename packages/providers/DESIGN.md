@@ -412,11 +412,42 @@ hookflare/
 │   │   └── package.json
 ```
 
-## Publishing
+## Provider Ecosystem
 
-- Built-in providers ship with `hookflare/providers`
-- Official providers publish as `@hookflare/provider-<name>`
-- Community providers follow `hookflare-provider-<name>` convention
+### Three tiers
+
+| Tier | Package naming | Maintained by | Example |
+|---|---|---|---|
+| **Built-in** | `hookflare/providers` | hookflare team | Stripe, GitHub, Slack |
+| **Official** | `@hookflare/provider-<name>` | hookedge org | Linear, Clerk |
+| **Community** | `hookflare-provider-<name>` | Anyone | Any service |
+
+Community providers can be promoted to Official when they are stable, tested, and actively maintained.
+
+### Using providers
+
+```bash
+# Built-in — just works
+hookflare connect stripe --secret whsec_xxx --to https://...
+
+# npm package (published)
+hookflare connect newebpay --provider hookflare-provider-newebpay --secret hash_key=xxx ...
+
+# GitHub repo (not published to npm — lowest barrier)
+hookflare connect newebpay --provider github:linyiru/hookflare-provider-newebpay --secret hash_key=xxx ...
+
+# Local path (during development)
+hookflare connect newebpay --provider ./my-providers/newebpay --secret hash_key=xxx ...
+```
+
+The `--provider` flag accepts three source types:
+- **npm package name** — resolved via npm registry
+- **`github:owner/repo`** — resolved directly from GitHub (no npm publish required)
+- **Local path** (`./` or `/`) — for development and testing
+
+GitHub-based providers have the lowest contribution barrier: fork the template, edit one file, push. No npm account needed.
+
+### Importing in code (SDK usage)
 
 ```typescript
 // Built-in
@@ -425,15 +456,29 @@ import { stripe } from 'hookflare/providers';
 // Official (separate package)
 import { linear } from '@hookflare/provider-linear';
 
-// Community
+// Community (npm or GitHub)
 import { custom } from 'hookflare-provider-mycrm';
 ```
 
 ## Contributing a Provider
 
-1. Create a file with `defineProvider()`
+### Quickest path (< 10 minutes)
+
+1. Fork [`hookedge/hookflare-provider-template`](https://github.com/hookedge/hookflare-provider-template)
+2. Edit `src/index.ts` — fill in `id`, `verification`, `events`
+3. Push to GitHub
+4. Share: `hookflare connect my-service --provider github:yourname/hookflare-provider-my-service`
+
+No npm account, no publish step, no review process.
+
+### Full contribution path
+
+1. Create a repo from the template
 2. Define `id`, `verification`, and `events` (minimum)
-3. Add `mock` generators if possible (greatly improves DX)
-4. Publish to npm or submit a PR to the hookflare repo
+3. Add `decode` if the provider uses encrypted payloads
+4. Add `mock` generators if possible (greatly improves DX)
+5. Add tests
+6. Publish to npm as `hookflare-provider-<name>`
+7. Submit a PR to add your provider to the [community providers list](https://github.com/hookedge/hookflare#community-providers) in the README
 
 See the [minimal example](#minimal-provider-example) above — it's three fields and one file.
