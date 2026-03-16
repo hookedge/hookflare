@@ -48,7 +48,17 @@ hookflare connect stripe \
   --events "payment_intent.*"
 ```
 
-This creates a source (Stripe, with signature verification), a destination (your API), and a subscription (forwarding payment events). The output includes the webhook URL to paste into your Stripe Dashboard.
+Output:
+
+```
+✓ Source created: src_a1b2c3 (stripe, signature verification enabled)
+✓ Destination created: dst_d4e5f6 (https://api.myapp.com/hooks)
+✓ Subscription created: sub_g7h8i9 (payment_intent.*)
+
+Webhook URL: https://your-hookflare.workers.dev/webhooks/src_a1b2c3
+
+Next: Add this URL to your Stripe Dashboard → Developers → Webhooks.
+```
 
 Omit `--events` to forward all events.
 
