@@ -42,7 +42,7 @@ Webhooks are deceptively simple — until they aren't. Providers send them once 
 | Export / Import / Migrate | ✅ Stable | Instance-to-instance migration with ID remapping |
 | Idempotency (KV-based deduplication) | ✅ Stable | Configurable TTL |
 | Payload archive (R2) | ✅ Stable | Configurable retention |
-| Rate limiting (per-source ingress) | ✅ Stable | KV-based with `X-RateLimit` headers |
+| Rate limiting (per-source ingress) | ✅ Stable | DO-based precise global limiting with in-memory pre-check |
 | `hookflare dev` (local tunnel + signature verification) | ✅ Stable | Cloudflare Quick Tunnel, auto-downloads cloudflared |
 | `hookflare connect` (one-shot setup) | ✅ Stable | Source + destination + subscription in one command |
 | `hookflare providers` (provider catalog) | ✅ Stable | Browse providers and event types |
@@ -159,21 +159,23 @@ Webhook Source (Stripe, GitHub, ...)         Your Application (API)
         |                                           ^
         v                                           |
   [Ingress Worker] --> [Queue] --> [Consumer] --> [Delivery DO] --> fetch()
-        |                            |               |
-        v                            v               v
-      [KV]                         [D1]            [R2]
-   idempotency                 config/logs     payload archive
+     |       |                        |               |
+     v       v                        v               v
+  [Rate    [KV]                     [D1]            [R2]
+  Limiter  idempotency           config/logs     payload archive
+    DO]
 ```
 
 | Component | Cloudflare Service | Role |
 |---|---|---|
 | **Ingress Worker** | Workers | Receives webhooks, verifies signatures, enqueues |
+| **Rate Limiter** | Durable Objects | Per-source precise global rate limiting |
 | **Message Queue** | Queues | Durable buffer — guarantees no event loss |
-| **Consumer Worker** | Workers | Reads from queue, resolves routing, dispatches |
+| **Consumer Worker** | Workers | Reads from queue, archives payload (R2), records event (D1), dispatches |
 | **Delivery Manager** | Durable Objects | Per-destination retry state machine with backoff |
 | **Config & Logs** | D1 (SQLite) | Sources, destinations, subscriptions, delivery logs |
-| **Idempotency Cache** | KV | Deduplication keys with TTL |
-| **Payload Archive** | R2 | Long-term storage for webhook payloads |
+| **Idempotency Cache** | KV | Deduplication keys with TTL (read on ingress, write on accept) |
+| **Payload Archive** | R2 | Long-term storage for webhook payloads (written by consumer, not ingress) |
 
 ## Delivery Guarantee
 
