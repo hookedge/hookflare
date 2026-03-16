@@ -156,7 +156,11 @@ Each destination can override strategy, retry count, interval, and which HTTP st
 ## CLI
 
 ```bash
+# npm
 npm i -g hookflare
+
+# Homebrew
+brew install hookedge/hookflare/hookflare
 ```
 
 ### Agent-Friendly Features
