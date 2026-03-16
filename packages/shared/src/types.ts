@@ -15,9 +15,11 @@ export interface Destination {
   name: string;
   url: string;
   timeout_ms: number;
+  retry_strategy: "exponential" | "linear" | "fixed";
   max_retries: number;
-  backoff_base_ms: number;
-  backoff_max_ms: number;
+  retry_interval_ms: number;
+  retry_max_interval_ms: number;
+  retry_on_status: string | null;
   created_at: string;
   updated_at: string;
 }

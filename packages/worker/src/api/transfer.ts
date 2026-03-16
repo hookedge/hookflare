@@ -97,9 +97,11 @@ app.post("/import", async (c) => {
       name: dst.name,
       url: dst.url,
       timeout_ms: dst.timeout_ms,
+      retry_strategy: dst.retry_strategy,
       max_retries: dst.max_retries,
-      backoff_base_ms: dst.backoff_base_ms,
-      backoff_max_ms: dst.backoff_max_ms,
+      retry_interval_ms: dst.retry_interval_ms,
+      retry_max_interval_ms: dst.retry_max_interval_ms,
+      retry_on_status: dst.retry_on_status,
     });
     result.destinations.created++;
   }

@@ -23,25 +23,30 @@ app.post("/", async (c) => {
     name: string;
     url: string;
     retry_policy?: {
+      strategy?: "exponential" | "linear" | "fixed";
       max_retries?: number;
+      interval_ms?: number;
+      max_interval_ms?: number;
       timeout_ms?: number;
-      backoff_base_ms?: number;
-      backoff_max_ms?: number;
+      on_status?: string[];
     };
   }>();
 
   if (!body.name) throw badRequest("name is required");
   if (!body.url) throw badRequest("url is required");
 
+  const rp = body.retry_policy;
   const id = generateId("dst");
   await db.createDestination(createDb(c.env.DB), {
     id,
     name: body.name,
     url: body.url,
-    timeout_ms: body.retry_policy?.timeout_ms ?? 30000,
-    max_retries: body.retry_policy?.max_retries ?? 5,
-    backoff_base_ms: body.retry_policy?.backoff_base_ms ?? 30000,
-    backoff_max_ms: body.retry_policy?.backoff_max_ms ?? 86400000,
+    timeout_ms: rp?.timeout_ms ?? 30000,
+    retry_strategy: rp?.strategy ?? "exponential",
+    max_retries: rp?.max_retries ?? 10,
+    retry_interval_ms: rp?.interval_ms ?? 60000,
+    retry_max_interval_ms: rp?.max_interval_ms ?? 86400000,
+    retry_on_status: rp?.on_status ? JSON.stringify(rp.on_status) : null,
   });
 
   const dest = await db.getDestination(createDb(c.env.DB), id);
@@ -49,40 +54,47 @@ app.post("/", async (c) => {
 });
 
 app.put("/:id", async (c) => {
+  const d = createDb(c.env.DB);
   const id = c.req.param("id");
-  const existing = await db.getDestination(createDb(c.env.DB), id);
+  const existing = await db.getDestination(d, id);
   if (!existing) throw notFound("Destination not found");
 
   const body = await c.req.json<{
     name?: string;
     url?: string;
     retry_policy?: {
+      strategy?: "exponential" | "linear" | "fixed";
       max_retries?: number;
+      interval_ms?: number;
+      max_interval_ms?: number;
       timeout_ms?: number;
-      backoff_base_ms?: number;
-      backoff_max_ms?: number;
+      on_status?: string[];
     };
   }>();
 
-  await db.updateDestination(createDb(c.env.DB), id, {
+  const rp = body.retry_policy;
+  await db.updateDestination(d, id, {
     name: body.name,
     url: body.url,
-    timeout_ms: body.retry_policy?.timeout_ms,
-    max_retries: body.retry_policy?.max_retries,
-    backoff_base_ms: body.retry_policy?.backoff_base_ms,
-    backoff_max_ms: body.retry_policy?.backoff_max_ms,
+    timeout_ms: rp?.timeout_ms,
+    retry_strategy: rp?.strategy,
+    max_retries: rp?.max_retries,
+    retry_interval_ms: rp?.interval_ms,
+    retry_max_interval_ms: rp?.max_interval_ms,
+    retry_on_status: rp?.on_status ? JSON.stringify(rp.on_status) : undefined,
   });
 
-  const dest = await db.getDestination(createDb(c.env.DB), id);
+  const dest = await db.getDestination(d, id);
   return c.json({ data: dest });
 });
 
 app.delete("/:id", async (c) => {
+  const d = createDb(c.env.DB);
   const id = c.req.param("id");
-  const existing = await db.getDestination(createDb(c.env.DB), id);
+  const existing = await db.getDestination(d, id);
   if (!existing) throw notFound("Destination not found");
 
-  await db.deleteDestination(createDb(c.env.DB), id);
+  await db.deleteDestination(d, id);
   return c.json({ message: "Deleted" });
 });
 

@@ -1,11 +1,13 @@
 import type { Env, DeliveryTask } from "../lib/types";
 import { createDb, updateDelivery } from "../db/queries";
+import { calculateRetryDelay, shouldRetryStatus } from "./retry";
+import type { RetryConfig } from "./retry";
 
 /**
  * DeliveryManager Durable Object
  *
  * One instance per destination. Manages outbound delivery with
- * exponential backoff retries using the Durable Object alarm API.
+ * configurable retry strategies using the Durable Object alarm API.
  */
 export class DeliveryManager implements DurableObject {
   private state: DurableObjectState;
@@ -29,11 +31,8 @@ export class DeliveryManager implements DurableObject {
   }
 
   private async scheduleDelivery(task: DeliveryTask): Promise<void> {
-    // Store the task and process immediately
     const key = `task:${task.deliveryId}`;
     await this.state.storage.put(key, task);
-
-    // Process right away for first attempt
     await this.attemptDelivery(task);
   }
 
@@ -82,13 +81,29 @@ export class DeliveryManager implements DurableObject {
         });
         await this.state.storage.delete(key);
       } else {
-        // Failed — schedule retry
-        await this.handleFailure(task, response.status, latencyMs, responseBody);
+        // Check if we should retry this status code
+        if (!shouldRetryStatus(response.status, task.retryOnStatus ?? null)) {
+          // Non-retryable status — go directly to DLQ
+          await updateDelivery(createDb(this.env.DB), task.deliveryId, {
+            status: "dlq",
+            attempt: task.attempt,
+            status_code: response.status,
+            latency_ms: latencyMs,
+            response_body: responseBody,
+          });
+          await this.state.storage.delete(key);
+          return;
+        }
+
+        // Check for Retry-After header from destination
+        const retryAfter = this.parseRetryAfter(response.headers.get("Retry-After"));
+
+        await this.handleFailure(task, response.status, latencyMs, responseBody, retryAfter);
       }
     } catch (err) {
       const latencyMs = Date.now() - startTime;
       const errorMessage = err instanceof Error ? err.message : "Unknown error";
-      await this.handleFailure(task, 0, latencyMs, errorMessage);
+      await this.handleFailure(task, 0, latencyMs, errorMessage, null);
     }
   }
 
@@ -97,6 +112,7 @@ export class DeliveryManager implements DurableObject {
     statusCode: number,
     latencyMs: number,
     responseBody: string,
+    retryAfterMs: number | null,
   ): Promise<void> {
     const key = `task:${task.deliveryId}`;
 
@@ -113,14 +129,21 @@ export class DeliveryManager implements DurableObject {
       return;
     }
 
-    // Calculate next retry with exponential backoff + jitter
-    const delay = Math.min(
-      task.backoffBaseMs * Math.pow(2, task.attempt - 1),
-      task.backoffMaxMs,
-    );
-    const jitter = delay * 0.2 * Math.random();
-    const nextRetryMs = delay + jitter;
-    const nextRetryAt = new Date(Date.now() + nextRetryMs);
+    // Calculate next retry delay
+    const retryConfig: RetryConfig = {
+      strategy: task.retryStrategy ?? "exponential",
+      maxRetries: task.maxRetries,
+      intervalMs: task.retryIntervalMs ?? 60000,
+      maxIntervalMs: task.retryMaxIntervalMs ?? 86400000,
+    };
+
+    // Retry-After header takes precedence (capped at 7 days)
+    const maxRetryAfter = 7 * 24 * 60 * 60 * 1000;
+    const delayMs = retryAfterMs
+      ? Math.min(retryAfterMs, maxRetryAfter)
+      : calculateRetryDelay(retryConfig, task.attempt);
+
+    const nextRetryAt = new Date(Date.now() + delayMs);
 
     // Update delivery record
     await updateDelivery(createDb(this.env.DB), task.deliveryId, {
@@ -136,16 +159,53 @@ export class DeliveryManager implements DurableObject {
     const updatedTask: DeliveryTask = { ...task, attempt: task.attempt + 1 };
     await this.state.storage.put(key, updatedTask);
 
-    // Schedule alarm for retry
-    await this.state.storage.setAlarm(nextRetryAt.getTime());
+    // Schedule alarm for retry (stagger by delivery ID to avoid thundering herd)
+    const stagger = this.hashToOffset(task.deliveryId, 5000); // up to 5s stagger
+    await this.state.storage.setAlarm(nextRetryAt.getTime() + stagger);
   }
 
   async alarm(): Promise<void> {
-    // Process all pending tasks
+    // Process all pending tasks, but stagger them
     const entries = await this.state.storage.list<DeliveryTask>({ prefix: "task:" });
 
     for (const [, task] of entries) {
       await this.attemptDelivery(task);
     }
+  }
+
+  /**
+   * Parse Retry-After header value to milliseconds.
+   * Supports: integer seconds, HTTP date, ISO date.
+   * Returns null if not parseable or not present.
+   */
+  private parseRetryAfter(value: string | null): number | null {
+    if (!value) return null;
+
+    // Integer seconds
+    const seconds = parseInt(value, 10);
+    if (!isNaN(seconds) && String(seconds) === value.trim()) {
+      if (seconds === -1) return null; // -1 means "don't retry"
+      return seconds * 1000;
+    }
+
+    // HTTP date or ISO date
+    const date = new Date(value);
+    if (!isNaN(date.getTime())) {
+      const ms = date.getTime() - Date.now();
+      return ms > 0 ? ms : null;
+    }
+
+    return null;
+  }
+
+  /**
+   * Deterministic offset from delivery ID to stagger retries.
+   */
+  private hashToOffset(id: string, maxMs: number): number {
+    let hash = 0;
+    for (let i = 0; i < id.length; i++) {
+      hash = ((hash << 5) - hash + id.charCodeAt(i)) | 0;
+    }
+    return Math.abs(hash) % maxMs;
   }
 }

@@ -22,9 +22,14 @@ export const destinations = sqliteTable("destinations", {
   name: text("name").notNull().unique(),
   url: text("url").notNull(),
   timeout_ms: integer("timeout_ms").notNull().default(30000),
-  max_retries: integer("max_retries").notNull().default(5),
-  backoff_base_ms: integer("backoff_base_ms").notNull().default(30000),
-  backoff_max_ms: integer("backoff_max_ms").notNull().default(86400000),
+  retry_strategy: text("retry_strategy", { enum: ["exponential", "linear", "fixed"] })
+    .notNull()
+    .default("exponential"),
+  max_retries: integer("max_retries").notNull().default(10),
+  retry_interval_ms: integer("retry_interval_ms").notNull().default(60000), // base interval: 1 min
+  retry_max_interval_ms: integer("retry_max_interval_ms").notNull().default(86400000), // cap at 24h
+  // status codes that trigger retry (JSON array, e.g. ["5xx","429"]). null = any non-2xx
+  retry_on_status: text("retry_on_status"),
   created_at: timestamp(),
   updated_at: timestamp(),
 });

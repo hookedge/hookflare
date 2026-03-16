@@ -43,6 +43,8 @@ export interface DeliveryTask {
   attempt: number;
   maxRetries: number;
   timeoutMs: number;
-  backoffBaseMs: number;
-  backoffMaxMs: number;
+  retryStrategy?: "exponential" | "linear" | "fixed";
+  retryIntervalMs?: number;
+  retryMaxIntervalMs?: number;
+  retryOnStatus?: string; // JSON array e.g. '["5xx","429"]'
 }

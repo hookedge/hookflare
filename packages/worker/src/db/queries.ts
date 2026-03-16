@@ -76,7 +76,7 @@ export async function updateDestination(
   fields: Partial<
     Pick<
       typeof destinations.$inferInsert,
-      "name" | "url" | "timeout_ms" | "max_retries" | "backoff_base_ms" | "backoff_max_ms"
+      "name" | "url" | "timeout_ms" | "max_retries" | "retry_strategy" | "retry_interval_ms" | "retry_max_interval_ms" | "retry_on_status"
     >
   >,
 ) {

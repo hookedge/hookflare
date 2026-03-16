@@ -57,8 +57,10 @@ async function processMessage(msg: QueueMessage, env: Env): Promise<void> {
       attempt: 1,
       maxRetries: dest.max_retries,
       timeoutMs: dest.timeout_ms,
-      backoffBaseMs: dest.backoff_base_ms,
-      backoffMaxMs: dest.backoff_max_ms,
+      retryStrategy: (dest as Record<string, unknown>).retry_strategy as DeliveryTask["retryStrategy"] ?? "exponential",
+      retryIntervalMs: (dest as Record<string, unknown>).retry_interval_ms as number ?? 60000,
+      retryMaxIntervalMs: (dest as Record<string, unknown>).retry_max_interval_ms as number ?? 86400000,
+      retryOnStatus: (dest as Record<string, unknown>).retry_on_status as string ?? null,
     };
 
     const doId = env.DELIVERY_DO.idFromName(dest.id);
