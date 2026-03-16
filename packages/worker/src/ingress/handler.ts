@@ -5,17 +5,25 @@ import { createDb, getSource, createEvent } from "../db/queries";
 import { verifyWebhookSignature } from "../lib/crypto";
 import type { VerificationType } from "../lib/crypto";
 import { ApiError } from "../lib/errors";
+import {
+  resolveSignatureHeader,
+  resolveVerificationType,
+  parseEventType,
+  handleChallenge,
+} from "../providers/registry";
 
 /**
  * POST /webhooks/:source_id
  *
  * 1. Look up source in D1
- * 2. Verify signature (if configured)
- * 3. Check idempotency (KV)
- * 4. Archive payload (R2)
- * 5. Record event (D1)
- * 6. Enqueue for delivery (Queue)
- * 7. Return 202 Accepted
+ * 2. Handle challenge (Slack url_verification, etc.)
+ * 3. Verify signature (provider-aware or legacy)
+ * 4. Check idempotency (KV)
+ * 5. Parse event type (provider-aware or fallback)
+ * 6. Archive payload (R2)
+ * 7. Record event (D1)
+ * 8. Enqueue for delivery (Queue)
+ * 9. Return 202 Accepted
  */
 export async function handleWebhookIngress(c: Context<{ Bindings: Env }>) {
   const sourceId = c.req.param("source_id")!;
@@ -30,10 +38,18 @@ export async function handleWebhookIngress(c: Context<{ Bindings: Env }>) {
 
   // Read raw body
   const body = await c.req.text();
+  const provider = source.provider ?? null;
 
-  // 2. Verify signature if configured
-  if (source.verification_type && source.verification_secret) {
+  // 2. Handle challenge (e.g. Slack url_verification)
+  const challengeResponse = handleChallenge(provider, body);
+  if (challengeResponse !== null) {
+    return c.json(challengeResponse, 200);
+  }
+
+  // 3. Verify signature (provider-aware)
+  if (source.verification_type || source.verification_secret) {
     const signatureHeader = resolveSignatureHeader(
+      provider,
       source.verification_type,
       c.req.header.bind(c.req),
     );
@@ -42,9 +58,10 @@ export async function handleWebhookIngress(c: Context<{ Bindings: Env }>) {
       throw new ApiError(401, "Missing webhook signature", "MISSING_SIGNATURE");
     }
 
+    const vType = resolveVerificationType(provider, source.verification_type);
     const valid = await verifyWebhookSignature(
-      source.verification_type as VerificationType,
-      source.verification_secret,
+      (vType ?? "hmac-sha256") as VerificationType,
+      source.verification_secret!,
       body,
       signatureHeader,
     );
@@ -54,7 +71,7 @@ export async function handleWebhookIngress(c: Context<{ Bindings: Env }>) {
     }
   }
 
-  // 3. Check idempotency
+  // 4. Check idempotency
   const idempotencyKey =
     c.req.header("x-idempotency-key") ??
     c.req.header("x-request-id") ??
@@ -68,31 +85,23 @@ export async function handleWebhookIngress(c: Context<{ Bindings: Env }>) {
     }
   }
 
-  // Parse event type from body (best effort)
-  let eventType: string | null = null;
-  try {
-    const parsed = JSON.parse(body);
-    eventType = parsed.type ?? parsed.event ?? parsed.event_type ?? null;
-    if (typeof eventType !== "string") eventType = null;
-  } catch {
-    // Not JSON — that's fine, we still accept it
+  // 5. Parse event type (provider-aware)
+  const headers: Record<string, string> = {};
+  for (const key of ["content-type", "user-agent", "x-request-id", "x-webhook-id", "x-github-event", "x-shopify-topic"]) {
+    const val = c.req.header(key);
+    if (val) headers[key] = val;
   }
 
-  // 4. Archive payload to R2
+  const eventType = parseEventType(provider, body, headers);
+
+  // 6. Archive payload to R2
   const eventId = generateId("evt");
   const r2Key = `${sourceId}/${eventId}`;
   await env.PAYLOAD_BUCKET.put(r2Key, body, {
     httpMetadata: { contentType: c.req.header("content-type") ?? "application/octet-stream" },
   });
 
-  // Capture relevant headers
-  const headers: Record<string, string> = {};
-  for (const key of ["content-type", "user-agent", "x-request-id", "x-webhook-id"]) {
-    const val = c.req.header(key);
-    if (val) headers[key] = val;
-  }
-
-  // 5. Record event in D1
+  // 7. Record event in D1
   await createEvent(db, {
     id: eventId,
     source_id: sourceId,
@@ -102,7 +111,7 @@ export async function handleWebhookIngress(c: Context<{ Bindings: Env }>) {
     headers: JSON.stringify(headers),
   });
 
-  // 6. Store idempotency key
+  // 8. Store idempotency key
   if (idempotencyKey) {
     const ttl = parseInt(env.IDEMPOTENCY_TTL_S, 10) || 86400;
     await env.IDEMPOTENCY_KV.put(`idem:${sourceId}:${idempotencyKey}`, eventId, {
@@ -110,7 +119,7 @@ export async function handleWebhookIngress(c: Context<{ Bindings: Env }>) {
     });
   }
 
-  // 7. Enqueue for delivery
+  // 9. Enqueue for delivery
   const queueMessage: QueueMessage = {
     eventId,
     sourceId,
@@ -123,24 +132,4 @@ export async function handleWebhookIngress(c: Context<{ Bindings: Env }>) {
   await env.WEBHOOK_QUEUE.send(queueMessage);
 
   return c.json({ message: "Accepted", event_id: eventId }, 202);
-}
-
-/**
- * Resolve the correct signature header based on verification type.
- * Each provider uses a different header name.
- */
-function resolveSignatureHeader(
-  type: string,
-  getHeader: (name: string) => string | undefined,
-): string | null {
-  switch (type) {
-    case "stripe":
-      return getHeader("stripe-signature") ?? null;
-    case "hmac-sha256":
-      return getHeader("x-hub-signature-256") ?? getHeader("x-webhook-signature") ?? null;
-    case "hmac-sha1":
-      return getHeader("x-hub-signature") ?? null;
-    default:
-      return getHeader("x-webhook-signature") ?? getHeader("x-hub-signature-256") ?? null;
-  }
 }
