@@ -37,6 +37,22 @@ hookflare config set token hf_sk_your_api_key
 
 ## CLI Reference
 
+### Local development tunnel
+
+```bash
+hookflare dev --port <n> [--provider <name>] [--secret <s>] [--no-verify]
+```
+
+Creates a secure tunnel to localhost via Cloudflare Quick Tunnel. No port forwarding, no IP exposure. Verifies provider signatures locally before forwarding. Auto-downloads `cloudflared` if not installed.
+
+```bash
+# Stripe with signature verification
+hookflare dev --port 3000 --provider stripe --secret whsec_xxx
+
+# Any webhook, no verification
+hookflare dev --port 3000
+```
+
 ### One-shot setup
 
 ```bash
@@ -82,6 +98,24 @@ hookflare migrate --from <url> --to <url>
 ```
 
 ## Common Workflows
+
+### Local development with real webhooks
+
+```bash
+# Start tunnel — webhooks from Stripe reach your localhost securely
+hookflare dev --port 3000 --provider stripe --secret whsec_xxx
+
+# Output:
+# ✓ Tunnel established
+# ✓ Stripe signature verification: enabled
+#
+#   Webhook URL:  https://random-words.trycloudflare.com   ← paste into Stripe Dashboard
+#   Forwarding:   → http://localhost:3000
+#
+# [12:00:01] payment_intent.succeeded  ✓ sig  → localhost:3000 (200, 45ms)
+```
+
+No port forwarding, no IP exposure, no Cloudflare account needed. `cloudflared` is auto-downloaded if not present.
 
 ### Connect Stripe in one command
 

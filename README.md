@@ -42,6 +42,7 @@ Webhooks are deceptively simple — until they aren't. Providers send them once 
 | Idempotency (KV-based deduplication) | ✅ Stable | Configurable TTL |
 | Payload archive (R2) | ✅ Stable | Configurable retention |
 | Rate limiting (per-source ingress) | ✅ Stable | KV-based with `X-RateLimit` headers |
+| `hookflare dev` (local tunnel + signature verification) | ✅ Stable | Cloudflare Quick Tunnel, auto-downloads cloudflared |
 | `hookflare connect` (one-shot setup) | 🚧 In progress | [#1](https://github.com/hookedge/hookflare/issues) |
 | `hookflare providers` (provider catalog) | 🚧 In progress | Browse providers and event types |
 | Pre-built providers (Stripe, GitHub, Slack, Shopify, Vercel) | 🚧 In progress | Event catalogs + payload schemas |
@@ -64,6 +65,28 @@ pnpm install
 pnpm --filter @hookflare/shared build
 pnpm --filter @hookflare/worker dev
 ```
+
+### Local Development
+
+Receive real webhooks on your local machine — no port forwarding, no exposed IP:
+
+```bash
+npm i -g hookflare
+
+hookflare dev --port 3000 --provider stripe --secret whsec_xxx
+```
+
+```
+✓ Tunnel established
+✓ Stripe signature verification: enabled
+
+  Webhook URL:  https://random-words.trycloudflare.com
+  Forwarding:   → http://localhost:3000
+
+[12:00:01] payment_intent.succeeded  ✓ sig  → localhost:3000 (200, 45ms)
+```
+
+Paste the Webhook URL into your Stripe Dashboard. hookflare verifies signatures locally and forwards to your app. `cloudflared` is downloaded automatically if not installed.
 
 ### Send Your First Webhook
 
@@ -162,6 +185,16 @@ npm i -g hookflare
 # Homebrew
 brew install hookedge/hookflare/hookflare
 ```
+
+### Local Development Tunnel
+
+```bash
+hookflare dev --port 3000 --provider stripe --secret whsec_xxx   # Stripe with verification
+hookflare dev --port 3000 --provider github --secret ghsec_xxx   # GitHub with verification
+hookflare dev --port 3000                                         # Any webhook, no verification
+```
+
+Uses [Cloudflare Quick Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) — no account needed, no port forwarding, no IP exposure.
 
 ### Agent-Friendly Features
 
@@ -328,6 +361,7 @@ hookflare focuses on **receiving and reliably forwarding** webhooks. It is not a
 - **Deploy in 30 seconds** — One-click Cloudflare deploy button provisions everything automatically.
 - **Agent-optimized** — CLI with `--json`, `--dry-run`, schema introspection. AI agents can operate hookflare without reading docs.
 - **Apache 2.0** — No restrictions on commercial use or self-hosting.
+- **Local dev tunnel** — `hookflare dev` creates a secure tunnel to localhost via Cloudflare. No port forwarding, no IP exposure.
 
 ## Community Providers
 
