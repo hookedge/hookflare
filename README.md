@@ -3,6 +3,7 @@
 **Never miss a webhook.** Free, open-source, deploys to Cloudflare in 30 seconds.
 
 [![CI](https://github.com/hookedge/hookflare/actions/workflows/ci.yml/badge.svg)](https://github.com/hookedge/hookflare/actions/workflows/ci.yml)
+[![Tests](https://img.shields.io/badge/tests-104-brightgreen)](https://github.com/hookedge/hookflare/tree/main/packages/worker/test)
 [![npm](https://img.shields.io/npm/v/hookflare)](https://www.npmjs.com/package/hookflare)
 [![npm downloads](https://img.shields.io/npm/dm/hookflare)](https://www.npmjs.com/package/hookflare)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
@@ -94,8 +95,18 @@ Paste the Webhook URL into your Stripe Dashboard. hookflare verifies signatures 
 ```bash
 npm i -g hookflare
 
+# Point CLI to your hookflare instance
 hookflare config set api_url http://localhost:8787
 
+# Create your first API key (only needed once, on fresh deploy)
+curl -X POST http://localhost:8787/api/v1/bootstrap \
+  -H "Content-Type: application/json" \
+  -d '{"name": "admin"}'
+# → Returns your API key (hf_sk_xxx). Store it securely — shown only once.
+
+hookflare config set token hf_sk_xxx
+
+# Connect Stripe in one command
 hookflare connect stripe \
   --secret whsec_your_stripe_webhook_secret \
   --to https://myapp.com/webhooks \
@@ -116,6 +127,25 @@ hookflare connect stripe \
 ```
 
 One command creates source, destination, and subscription. Paste the Webhook URL into your provider's dashboard.
+
+### Monitor
+
+```bash
+# Stream events in real-time (like tail -f)
+hookflare tail
+
+# Filter by source
+hookflare tail --source src_abc123
+
+# Pipe to an agent or script
+hookflare tail --json | ./my-agent
+
+# List recent events
+hookflare events ls --json --limit 10
+
+# Check circuit breaker status
+hookflare dest get dst_def456 --json
+```
 
 ## Architecture
 
@@ -384,6 +414,15 @@ pnpm --filter @hookflare/worker test      # Run tests
 pnpm --filter @hookflare/worker typecheck # Type check
 pnpm --filter hookflare build             # Build CLI
 ```
+
+### Tests
+
+104 integration tests across 9 test files, running on the actual Cloudflare Workers runtime via `vitest-pool-workers`:
+
+- **Ingress**: signature verification (Stripe `t=,v1=`, GitHub HMAC, Shopify Base64), idempotency dedup, event type parsing
+- **Delivery**: retry strategies (exponential/linear/fixed), status code filtering, circuit breaker state transitions
+- **API**: CRUD for all resources, authentication, bootstrap, input validation, secret masking
+- **Transfer**: export/import roundtrip, ID remapping, dedup by name
 
 ## Project Structure
 
