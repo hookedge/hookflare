@@ -30,27 +30,27 @@ Webhooks are deceptively simple — until they aren't. Providers send them once 
 
 | Feature | Status | Notes |
 |---|---|---|
-| Webhook ingestion with signature verification | ✅ Stable | Stripe, GitHub, generic HMAC |
-| Reliable delivery with retries (exponential/linear/fixed) | ✅ Stable | Respects `Retry-After` headers |
-| Circuit breaker per destination | ✅ Stable | Open/half-open/closed with auto-recovery |
-| Fan-out routing (one source → multiple destinations) | ✅ Stable | Event type wildcard filters |
-| Dead letter queue with batch replay | ✅ Stable | Per-destination DLQ inspection and replay |
-| REST API (CRUD for all resources) | ✅ Stable | Sources, destinations, subscriptions, events, keys |
-| API key authentication (simple + advanced mode) | ✅ Stable | Env var or D1-managed keys with scopes |
-| CLI with `--json`, `--dry-run`, `--data`, `--fields` | ✅ Stable | Agent-optimized |
-| `hookflare schema` (runtime API introspection) | ✅ Stable | Agent-friendly resource discovery |
-| Export / Import / Migrate | ✅ Stable | Instance-to-instance migration with ID remapping |
-| Idempotency (KV-based deduplication) | ✅ Stable | Configurable TTL |
-| Payload archive (R2) | ✅ Stable | Configurable retention |
-| Rate limiting (per-source ingress) | ✅ Stable | DO-based precise global limiting with in-memory pre-check |
-| `hookflare dev` (local tunnel + signature verification) | ✅ Stable | Cloudflare Quick Tunnel, auto-downloads cloudflared |
-| `hookflare connect` (one-shot setup) | ✅ Stable | Source + destination + subscription in one command |
-| `hookflare providers` (provider catalog) | ✅ Stable | Browse providers and event types |
-| Pre-built providers (Stripe, GitHub, Slack, Shopify, Vercel) | ✅ Stable | Event catalogs, verification, presets |
-| `defineProvider()` (community providers) | ✅ Stable | One file, three fields, publish to npm or GitHub |
-| SSRF protection on destination URLs | ✅ Stable | Blocks private IPs, localhost, non-HTTPS |
-| Payload size limit (256KB) | ✅ Stable | Returns 413 on oversized webhooks |
-| DLQ notifications | ✅ Stable | Webhook callback when deliveries permanently fail |
+| Webhook ingestion with signature verification | ✅ Implemented | Stripe, GitHub, generic HMAC |
+| Reliable delivery with retries (exponential/linear/fixed) | ✅ Implemented | Respects `Retry-After` headers |
+| Circuit breaker per destination | ✅ Implemented | Open/half-open/closed with auto-recovery |
+| Fan-out routing (one source → multiple destinations) | ✅ Implemented | Event type wildcard filters |
+| Dead letter queue with batch replay | ✅ Implemented | Per-destination DLQ inspection and replay |
+| REST API (CRUD for all resources) | ✅ Implemented | Sources, destinations, subscriptions, events, keys |
+| API key authentication (simple + advanced mode) | ✅ Implemented | Env var or D1-managed keys with scopes |
+| CLI with `--json`, `--dry-run`, `--data`, `--fields` | ✅ Implemented | Agent-optimized |
+| `hookflare schema` (runtime API introspection) | ✅ Implemented | Agent-friendly resource discovery |
+| Export / Import / Migrate | ✅ Implemented | Instance-to-instance migration with ID remapping |
+| Idempotency (KV-based deduplication) | ✅ Implemented | Configurable TTL |
+| Payload archive (R2) | ✅ Implemented | Configurable retention |
+| Rate limiting (per-source ingress) | ✅ Implemented | DO-based precise global limiting with in-memory pre-check |
+| `hookflare dev` (local tunnel + signature verification) | ✅ Implemented | Cloudflare Quick Tunnel, auto-downloads cloudflared |
+| `hookflare connect` (one-shot setup) | ✅ Implemented | Source + destination + subscription in one command |
+| `hookflare providers` (provider catalog) | ✅ Implemented | Browse providers and event types |
+| Pre-built providers (Stripe, GitHub, Slack, Shopify, Vercel) | ✅ Implemented | Event catalogs, verification, presets |
+| `defineProvider()` (community providers) | ✅ Implemented | One file, three fields, publish to npm or GitHub |
+| SSRF protection on destination URLs | ✅ Implemented | Blocks private IPs, localhost, non-HTTPS |
+| Payload size limit (256KB) | ✅ Implemented | Returns 413 on oversized webhooks |
+| DLQ notifications | ✅ Implemented | Webhook callback when deliveries permanently fail |
 | **0% error rate under load** | ✅ Verified | [P50 303ms, 0 errors, DO-based rate limiting](BENCHMARKS.md) |
 | Dashboard (static SPA) | 📋 Planned | Cloudflare Pages, connects to any instance |
 | Structured logging | 📋 Planned | JSON logs for observability |
