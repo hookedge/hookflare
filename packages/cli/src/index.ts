@@ -9,6 +9,7 @@ import { exportCommand, importCommand, migrateCommand } from "./commands/transfe
 import { devCommand } from "./commands/dev.js";
 import { tailCommand } from "./commands/tail.js";
 import { providersCommand } from "./commands/providers.js";
+import { connectCommand } from "./commands/connect.js";
 import { HookflareClient } from "./client.js";
 
 const program = new Command();
@@ -167,6 +168,7 @@ program.addCommand(eventsCommand);
 program.addCommand(exportCommand);
 program.addCommand(importCommand);
 program.addCommand(migrateCommand);
+program.addCommand(connectCommand);
 program.addCommand(devCommand);
 program.addCommand(tailCommand);
 program.addCommand(providersCommand);

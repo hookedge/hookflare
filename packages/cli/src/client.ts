@@ -53,7 +53,7 @@ export class HookflareClient {
     return this.request("GET", `/api/v1/sources/${id}`);
   }
 
-  createSource(body: { name: string; verification?: { type: string; secret: string } }) {
+  createSource(body: { name: string; provider?: string; verification?: { type: string; secret: string } }) {
     return this.request("POST", "/api/v1/sources", body);
   }
 
