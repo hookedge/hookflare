@@ -2,7 +2,8 @@ import type { Context } from "hono";
 import type { Env, QueueMessage } from "../lib/types";
 import { generateId } from "../lib/id";
 import { createDb, getSource, createEvent } from "../db/queries";
-import { verifyHmacSignature } from "../lib/crypto";
+import { verifyWebhookSignature } from "../lib/crypto";
+import type { VerificationType } from "../lib/crypto";
 import { ApiError } from "../lib/errors";
 
 /**
@@ -32,22 +33,20 @@ export async function handleWebhookIngress(c: Context<{ Bindings: Env }>) {
 
   // 2. Verify signature if configured
   if (source.verification_type && source.verification_secret) {
-    const signature =
-      c.req.header("x-hub-signature-256") ??
-      c.req.header("x-hub-signature") ??
-      c.req.header("stripe-signature") ??
-      c.req.header("x-webhook-signature") ??
-      "";
+    const signatureHeader = resolveSignatureHeader(
+      source.verification_type,
+      c.req.header.bind(c.req),
+    );
 
-    if (!signature) {
+    if (!signatureHeader) {
       throw new ApiError(401, "Missing webhook signature", "MISSING_SIGNATURE");
     }
 
-    const valid = await verifyHmacSignature(
-      source.verification_type,
+    const valid = await verifyWebhookSignature(
+      source.verification_type as VerificationType,
       source.verification_secret,
       body,
-      signature,
+      signatureHeader,
     );
 
     if (!valid) {
@@ -124,4 +123,24 @@ export async function handleWebhookIngress(c: Context<{ Bindings: Env }>) {
   await env.WEBHOOK_QUEUE.send(queueMessage);
 
   return c.json({ message: "Accepted", event_id: eventId }, 202);
+}
+
+/**
+ * Resolve the correct signature header based on verification type.
+ * Each provider uses a different header name.
+ */
+function resolveSignatureHeader(
+  type: string,
+  getHeader: (name: string) => string | undefined,
+): string | null {
+  switch (type) {
+    case "stripe":
+      return getHeader("stripe-signature") ?? null;
+    case "hmac-sha256":
+      return getHeader("x-hub-signature-256") ?? getHeader("x-webhook-signature") ?? null;
+    case "hmac-sha1":
+      return getHeader("x-hub-signature") ?? null;
+    default:
+      return getHeader("x-webhook-signature") ?? getHeader("x-hub-signature-256") ?? null;
+  }
 }
