@@ -28,6 +28,7 @@ app.post("/", async (c) => {
   await db.createSource(d, {
     id,
     name: body.name,
+    provider: body.provider ?? null,
     verification_type: body.verification?.type ?? null,
     verification_secret: body.verification?.secret ?? null,
   });
@@ -46,6 +47,7 @@ app.put("/:id", async (c) => {
 
   await db.updateSource(d, id, {
     name: body.name,
+    provider: body.provider,
     verification_type: body.verification?.type,
     verification_secret: body.verification?.secret,
   });

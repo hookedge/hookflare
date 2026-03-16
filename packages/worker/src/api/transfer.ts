@@ -70,6 +70,7 @@ app.post("/import", async (c) => {
     await db.createSource(d, {
       id: newId,
       name: src.name,
+      provider: src.provider ?? null,
       verification_type: src.verification_type,
       verification_secret: src.verification_secret,
     });

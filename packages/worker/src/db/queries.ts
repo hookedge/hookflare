@@ -35,7 +35,7 @@ export async function updateSource(
   db: DB,
   id: string,
   fields: Partial<
-    Pick<typeof sources.$inferInsert, "name" | "verification_type" | "verification_secret">
+    Pick<typeof sources.$inferInsert, "name" | "provider" | "verification_type" | "verification_secret">
   >,
 ) {
   await db

@@ -4,6 +4,7 @@
 export interface Source {
   id: string;
   name: string;
+  provider: string | null;
   verification_type: string | null;
   verification_secret: string | null;
   created_at: string;

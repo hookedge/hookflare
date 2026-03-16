@@ -16,6 +16,7 @@ export const createSourceSchema = z.object({
 
 export const updateSourceSchema = z.object({
   name: z.string().min(1).max(100).optional(),
+  provider: z.string().max(50).nullish(),
   verification: z
     .object({
       type: z.string().min(1),
@@ -73,6 +74,7 @@ export const importDataSchema = z.object({
   sources: z.array(z.object({
     id: z.string(),
     name: z.string(),
+    provider: z.string().nullable().optional(),
     verification_type: z.string().nullable().optional(),
     verification_secret: z.string().nullable().optional(),
     created_at: z.string().optional(),

@@ -9,6 +9,7 @@ const timestamp = () =>
 export const sources = sqliteTable("sources", {
   id: text("id").primaryKey(),
   name: text("name").notNull().unique(),
+  provider: text("provider"),  // references provider catalog (e.g. "stripe"), null = generic
   verification_type: text("verification_type"),
   verification_secret: text("verification_secret"),
   created_at: timestamp(),
