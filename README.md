@@ -51,7 +51,7 @@ Webhooks are deceptively simple — until they aren't. Providers send them once 
 | SSRF protection on destination URLs | ✅ Stable | Blocks private IPs, localhost, non-HTTPS |
 | Payload size limit (256KB) | ✅ Stable | Returns 413 on oversized webhooks |
 | DLQ notifications | ✅ Stable | Webhook callback when deliveries permanently fail |
-| **0% error rate under load** | ✅ Verified | [149 RPS, P50 239ms, 0 errors](BENCHMARKS.md) |
+| **0% error rate under load** | ✅ Verified | [P50 303ms, 0 errors, DO-based rate limiting](BENCHMARKS.md) |
 | Dashboard (static SPA) | 📋 Planned | Cloudflare Pages, connects to any instance |
 | Structured logging | 📋 Planned | JSON logs for observability |
 

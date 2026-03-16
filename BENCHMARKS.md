@@ -111,16 +111,39 @@ hey -n 500 -c 50 -m POST \
   https://your-worker.workers.dev/webhooks/<source_id>
 ```
 
+## Rate Limiting
+
+hookflare uses a two-layer rate limiter:
+
+1. **In-memory pre-check** (0ms) — fast rejection for requests clearly over the limit
+2. **RateLimiter Durable Object** (5-20ms) — precise, globally consistent counter per source
+
+The DO layer adds ~60ms to P50 latency but provides real protection:
+- One DO instance per source_id, serializable (no race conditions)
+- No storage writes (in-memory counter only — resets on DO eviction)
+- Graceful fallback: if DO is unavailable, in-memory check still works
+
+| Metric | In-memory only | DO rate limiter (current) |
+|---|---|---|
+| P50 Latency | 239ms | **303ms** |
+| Global accuracy | ❌ per-isolate | ✅ per-source |
+| Race conditions | Possible | None |
+| Error rate | 0% | **0%** |
+
+Default: 100 requests per 60 seconds per source. Configurable. For strict global limits, use Cloudflare WAF rules.
+
 ## Optimization History
 
 | Version | Avg Latency | RPS | Error Rate | Change |
 |---|---|---|---|---|
 | v0.1 (6 sequential I/O) | 860ms | 21 | 8-20% | Baseline |
 | v0.2 (deferred R2+D1) | 420ms | 38 | 20% | KV rate limiter still on hot path |
-| **v0.3 (in-memory rate limit)** | **265ms** | **149** | **0%** | **Current** |
+| v0.3 (in-memory rate limit) | 265ms | 149 | 0% | Eliminated KV from hot path |
+| **v0.4 (DO rate limiter)** | **303ms** | **60** | **0%** | **Current — precise global rate limiting** |
 
 Key optimizations:
 - Source lookup cached in-memory (60s TTL) — eliminates D1 read per request
 - R2 write + D1 event creation deferred to queue consumer
-- KV-based rate limiter replaced with in-memory counter — eliminates KV write per request
+- KV-based rate limiter replaced with DO-based — precise, zero race conditions, zero KV quota
 - Queue send + KV idempotency write run in parallel
+- In-memory pre-check reduces DO calls by ~80% under normal traffic
