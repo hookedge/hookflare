@@ -19,22 +19,89 @@ Providers can declare the following capabilities. Each is independent and option
 
 ### MVP Capabilities
 
+#### `secrets` — Credential Definition
+
+Declare what credentials the provider requires. Most providers need a single signing secret, but some require multiple credentials (e.g., a key + IV pair for AES encryption, or a certificate for JWS verification).
+
+```typescript
+// Single secret (default — no need to declare explicitly)
+// hookflare connect stripe --secret whsec_xxx
+
+// Multiple secrets
+secrets: {
+  api_key: { description: 'API key for payload decryption' },
+  api_iv: { description: 'Initialization vector for AES decryption' },
+}
+// hookflare connect my-psp --secret api_key=xxx --secret api_iv=yyy
+
+// Certificate-based
+secrets: {
+  root_cert: { description: 'Root CA certificate (PEM)', required: false },
+}
+```
+
+When `secrets` is not declared, the provider accepts a single `--secret` string (covers Stripe, GitHub, and most HMAC providers).
+
 #### `verify` — Signature Verification
 
 How to validate that an incoming webhook is authentic.
 
 ```typescript
+// Built-in verifiers (handled by hookflare core)
 verification: {
-  type: 'stripe-signature',      // built-in verifier
+  type: 'stripe-signature',
   header: 'stripe-signature',
 }
-// or generic HMAC:
+
+// Generic HMAC
 verification: {
   header: 'x-hub-signature-256',
   algorithm: 'hmac-sha256',
   encoding: 'hex',               // or 'base64' for Shopify
 }
+
+// Custom verification (for non-HMAC providers)
+verification: {
+  type: 'custom',
+  verify: async (secrets, body, headers) => {
+    // Full control — use any verification logic
+    // Return true if authentic, false if not
+    return true;
+  },
+}
 ```
+
+The `custom` type receives the full `secrets` object, enabling verification methods beyond HMAC: RSA signatures, certificate chains, AES integrity checks, or callback-based verification.
+
+#### `decode` — Payload Decryption / Preprocessing
+
+Some providers send encrypted, signed, or encoded payloads that must be decoded before hookflare can read, store, or forward them. `decode` runs after `verify` and before everything else in the pipeline.
+
+```
+Pipeline with decode:
+  receive → verify → [decode] → parse event type → store → forward
+                       ↑
+              encrypted payload → readable JSON
+```
+
+```typescript
+// AES-encrypted payload (common in payment gateways)
+decode: async (secrets, body, headers) => {
+  const encrypted = JSON.parse(body).encrypted_data;
+  return JSON.parse(aesDecrypt(encrypted, secrets.api_key, secrets.api_iv));
+},
+
+// JWS/JWT signed payload (Apple App Store)
+decode: async (secrets, body, headers) => {
+  const { signedPayload } = JSON.parse(body);
+  const decoded = verifyAndDecodeJWS(signedPayload, secrets.root_cert);
+  return decoded;
+},
+```
+
+When `decode` is not declared, hookflare treats the raw body as the payload (covers Stripe, GitHub, and any provider that sends plaintext JSON).
+
+**This capability is what distinguishes hookflare from webhook tools that only support HMAC signatures.** It enables integration with payment gateways, enterprise systems, and regional providers that use encryption or signed tokens.
 
 #### `events` — Event Type Catalog
 
@@ -52,11 +119,15 @@ events: {
 
 #### `parse` — Event Extraction
 
-How to extract the event type and ID from a raw payload.
+How to extract the event type and ID from the payload. When `decode` is declared, `parse` receives the decoded output, not the raw body.
 
 ```typescript
-parseEventType: (body) => body.type,       // Stripe
+parseEventType: (body) => body.type,       // Stripe (plaintext)
 parseEventId: (body) => body.id,
+
+// Apple App Store (after decode)
+parseEventType: (decoded) => decoded.notificationType,  // e.g., 'DID_RENEW'
+parseEventId: (decoded) => decoded.notificationUUID,
 ```
 
 #### `challenge` — URL Verification
@@ -178,7 +249,7 @@ export default defineProvider({
 
 Three fields. One file. Publishable to npm as `hookflare-provider-linear`.
 
-## Full Provider Example
+## Full Provider Example (Plaintext — Stripe)
 
 ```typescript
 import { defineProvider } from 'hookflare/provider';
@@ -244,6 +315,85 @@ export default defineProvider({
   },
 });
 ```
+
+## Full Provider Example (Encrypted / Signed — Apple App Store)
+
+Apple App Store Server Notifications v2 sends a JWS (JSON Web Signature) payload — the raw body is a signed JWT, not readable JSON. The provider must decode it before hookflare can process it.
+
+```typescript
+import { defineProvider } from 'hookflare/provider';
+
+export default defineProvider({
+  id: 'apple-app-store',
+  name: 'Apple App Store',
+  website: 'https://developer.apple.com',
+  dashboardUrl: 'https://appstoreconnect.apple.com',
+
+  secrets: {
+    root_cert: {
+      description: 'Apple Root CA certificate (PEM) for JWS verification. Optional — defaults to Apple production cert.',
+      required: false,
+    },
+  },
+
+  verification: {
+    type: 'custom',
+    verify: async (secrets, body, headers) => {
+      // Apple signs the payload as a JWS — verification is part of decoding
+      // We verify the certificate chain in decode(), so verify() is a pass-through
+      return true;
+    },
+  },
+
+  decode: async (secrets, body) => {
+    const { signedPayload } = JSON.parse(body);
+    // 1. Decode the JWS header to get the x5c certificate chain
+    // 2. Verify the chain against Apple's root CA
+    // 3. Verify the JWS signature using the leaf certificate
+    // 4. Return the decoded payload
+    const decoded = verifyAndDecodeAppleJWS(signedPayload, secrets.root_cert);
+    return decoded;
+  },
+
+  parseEventType: (decoded) => decoded.notificationType,
+  parseEventId: (decoded) => decoded.notificationUUID,
+
+  events: {
+    'DID_RENEW': 'Subscription successfully renewed',
+    'DID_CHANGE_RENEWAL_STATUS': 'User changed subscription auto-renew status',
+    'DID_FAIL_TO_RENEW': 'Subscription failed to renew (billing issue)',
+    'EXPIRED': 'Subscription expired',
+    'REFUND': 'Apple refunded a transaction',
+    'SUBSCRIBED': 'User subscribed for the first time or re-subscribed',
+    'CONSUMPTION_REQUEST': 'Apple requests consumption info for a refund decision',
+    'GRACE_PERIOD_EXPIRED': 'Grace period for billing retry ended',
+    'OFFER_REDEEMED': 'User redeemed a promotional offer',
+    'RENEWAL_EXTENDED': 'Subscription renewal date was extended',
+    'REVOKE': 'Family Sharing user lost access',
+    'TEST': 'Sandbox test notification',
+  },
+
+  presets: {
+    billing: ['DID_RENEW', 'DID_FAIL_TO_RENEW', 'EXPIRED', 'GRACE_PERIOD_EXPIRED'],
+    access: ['SUBSCRIBED', 'REVOKE', 'REFUND', 'DID_CHANGE_RENEWAL_STATUS'],
+    all: ['*'],
+  },
+
+  nextSteps: {
+    dashboard: 'https://appstoreconnect.apple.com',
+    instruction: 'Go to App Store Connect → App → App Information → App Store Server Notifications, paste the webhook URL, and select Version 2.',
+  },
+});
+```
+
+This example demonstrates the `secrets` + `decode` capabilities. The same pattern applies to:
+
+- **Payment gateways** that encrypt notification payloads with AES (using a key + IV pair)
+- **Enterprise platforms** that wrap payloads in signed JWTs or JWS tokens
+- **Legacy systems** that use RSA signatures instead of HMAC shared secrets
+- **Regional payment processors** that use form-encoded encrypted fields rather than JSON
+
+The `decode` capability ensures hookflare is not limited to HMAC-signing providers. Any service that requires decryption, JWT decoding, or payload transformation before the data is usable can be supported through a provider.
 
 ## Package Structure
 
