@@ -62,8 +62,8 @@ A fresh deployment exposes `POST /api/v1/bootstrap` (unauthenticated) to create 
 
 **Mitigation**: Bootstrap immediately after deployment, or set `API_TOKEN` via `wrangler secret put API_TOKEN`. The env var always takes priority and can recover a compromised bootstrap.
 
-### Rate limiter eventual consistency
+### Rate limiter is per-edge-location
 
-The KV-based rate limiter uses a non-atomic read-then-write pattern. Under high concurrent load, the actual request count may briefly exceed the configured limit.
+The in-memory rate limiter operates per Cloudflare edge isolate, not globally. Under distributed traffic from many edge locations, the effective global limit may exceed the configured per-source limit.
 
-**Mitigation**: Use Cloudflare WAF rules for strict rate limiting. The built-in limiter is best-effort.
+**Mitigation**: Use Cloudflare WAF rules for strict global rate limiting. The built-in limiter is designed for abuse prevention, not billing-grade enforcement.
