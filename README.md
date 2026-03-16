@@ -329,9 +329,21 @@ hookflare focuses on **receiving and reliably forwarding** webhooks. It is not a
 - **Agent-optimized** — CLI with `--json`, `--dry-run`, schema introspection. AI agents can operate hookflare without reading docs.
 - **Apache 2.0** — No restrictions on commercial use or self-hosting.
 
+## Community Providers
+
+These providers are maintained by the community. To add yours, submit a PR.
+
+| Provider | Package | Description |
+|---|---|---|
+| *Be the first!* | [Create from template](https://github.com/hookedge/hookflare-provider-template) | ~10 minutes, no npm account needed |
+
 ## Contributing
 
-We welcome contributions! The provider system is designed for community participation — each provider is a single file with a well-defined interface. See [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
+We welcome contributions! The easiest way to start is building a provider — it's a single file with a well-defined interface, and you don't need npm or a review process.
+
+- **[Build a provider](CONTRIBUTING.md#build-a-provider)** — ~10 minutes from template to working provider
+- **[Provider Design Guide](packages/providers/DESIGN.md)** — full capability specification
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** — development setup, code style, how to submit PRs
 
 ## License
 

@@ -25,9 +25,48 @@ Check [open issues](https://github.com/hookedge/hookflare/issues) for tasks. Iss
 
 ### Build a Provider
 
-The highest-impact contribution right now is adding webhook providers. Each provider is a single file that defines how hookflare verifies and understands webhooks from a specific service.
+The highest-impact contribution right now is adding webhook providers. A provider is a single file that teaches hookflare how to verify and understand webhooks from a specific service.
 
-See [`packages/providers/DESIGN.md`](packages/providers/DESIGN.md) for the full specification.
+**Quickest path (~10 minutes, no npm account needed):**
+
+1. Create a repo from the [provider template](https://github.com/hookedge/hookflare-provider-template):
+
+   ```bash
+   gh repo create yourname/hookflare-provider-my-service \
+     --template hookedge/hookflare-provider-template
+   cd hookflare-provider-my-service
+   npm install
+   ```
+
+2. Edit `src/index.ts` — fill in `id`, `verification`, and `events` (minimum).
+
+3. Run the tests — they'll fail until you change from the template defaults:
+
+   ```bash
+   npm test
+   ```
+
+4. Push to GitHub. Users can install directly:
+
+   ```bash
+   hookflare connect my-service \
+     --provider github:yourname/hookflare-provider-my-service \
+     --secret xxx --to https://...
+   ```
+
+5. Optionally, publish to npm as `hookflare-provider-<name>` and submit a PR to add it to the [community providers list](#community-providers) in the README.
+
+See [`packages/providers/DESIGN.md`](packages/providers/DESIGN.md) for the full specification, including support for encrypted payloads (`decode`), challenge-response (`challenge`), and multi-secret providers (`secrets`).
+
+#### Provider Ecosystem Tiers
+
+| Tier | Package naming | Maintained by |
+|---|---|---|
+| **Built-in** | Ships with `hookflare/providers` | hookflare team |
+| **Official** | `@hookflare/provider-<name>` | hookedge org |
+| **Community** | `hookflare-provider-<name>` | Anyone |
+
+Community providers can be promoted to official when they are stable, tested, and actively maintained.
 
 ### Other Ways to Help
 
@@ -63,4 +102,4 @@ Use clear, descriptive commit messages:
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under the Apache 2.0 License.
+By contributing to hookflare core, you agree that your contributions will be licensed under the [Apache 2.0](LICENSE) license. Provider contributions using the [template](https://github.com/hookedge/hookflare-provider-template) are licensed under MIT by default — you may choose your own license for your provider.
