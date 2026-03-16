@@ -28,9 +28,11 @@ jobs:
       - name: Typecheck
         run: pnpm --filter @hookflare/worker typecheck && pnpm --filter hookflare typecheck
 
-      - name: Test with coverage
-        # Retry once — @cloudflare/vitest-pool-workers has a known D1 isolation flake
-        run: pnpm --filter @hookflare/worker test -- --coverage || pnpm --filter @hookflare/worker test -- --coverage
+      - name: Unit tests (no D1)
+        run: pnpm --filter @hookflare/worker vitest run test/crypto.test.ts test/circuit-breaker.test.ts test/delivery.test.ts
+
+      - name: Integration tests (D1)
+        run: pnpm --filter @hookflare/worker vitest run test/api.test.ts test/bootstrap.test.ts test/validation.test.ts test/secret-masking.test.ts test/transfer.test.ts test/delivery-manager.test.ts || pnpm --filter @hookflare/worker vitest run test/api.test.ts test/bootstrap.test.ts test/validation.test.ts test/secret-masking.test.ts test/transfer.test.ts test/delivery-manager.test.ts
 
       - name: Build CLI
         run: pnpm --filter hookflare build
