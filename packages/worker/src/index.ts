@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import type { Env, QueueMessage } from "./lib/types";
 import { ApiError } from "./lib/errors";
 import { authMiddleware } from "./auth/middleware";
+import { rateLimitMiddleware } from "./lib/rate-limit";
 import { handleWebhookIngress } from "./ingress/handler";
 import { handleQueueBatch } from "./queue/consumer";
 import { sourcesApi } from "./api/sources";
@@ -27,7 +28,8 @@ app.onError((err, c) => {
 // --- Health check (public) ---
 app.get("/health", (c) => c.json({ status: "ok" }));
 
-// --- Webhook ingestion (public — external providers send webhooks here) ---
+// --- Webhook ingestion (public, rate-limited) ---
+app.use("/webhooks/:source_id", rateLimitMiddleware());
 app.post("/webhooks/:source_id", handleWebhookIngress);
 
 // --- Management API (authenticated) ---
