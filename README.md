@@ -2,9 +2,12 @@
 
 **Never miss a webhook.** Free, open-source, deploys to Cloudflare in 30 seconds.
 
-[![Build](https://github.com/hookedge/hookflare/actions/workflows/ci.yml/badge.svg)](https://github.com/hookedge/hookflare/actions/workflows/ci.yml)
-[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+[![CI](https://github.com/hookedge/hookflare/actions/workflows/ci.yml/badge.svg)](https://github.com/hookedge/hookflare/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/hookflare)](https://www.npmjs.com/package/hookflare)
+[![npm downloads](https://img.shields.io/npm/dm/hookflare)](https://www.npmjs.com/package/hookflare)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Cloudflare Workers](https://img.shields.io/badge/Cloudflare%20Workers-F38020?logo=cloudflare&logoColor=white)](https://workers.cloudflare.com/)
 
 > **Status: Alpha** — Core engine is stable and tested. Provider system and `connect` command are [in development](#roadmap).
 
