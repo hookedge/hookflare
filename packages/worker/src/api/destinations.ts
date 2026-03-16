@@ -88,6 +88,59 @@ app.put("/:id", async (c) => {
   return c.json({ data: dest });
 });
 
+// --- DLQ operations ---
+
+app.get("/:id/failed", async (c) => {
+  const d = createDb(c.env.DB);
+  const id = c.req.param("id");
+  const existing = await db.getDestination(d, id);
+  if (!existing) throw notFound("Destination not found");
+
+  const limit = parseInt(c.req.query("limit") ?? "100", 10);
+  const offset = parseInt(c.req.query("offset") ?? "0", 10);
+
+  const [failed, count] = await Promise.all([
+    db.getFailedDeliveriesByDestination(d, id, { limit, offset }),
+    db.countFailedDeliveries(d, id),
+  ]);
+
+  return c.json({ data: failed, total: count });
+});
+
+app.post("/:id/replay-failed", async (c) => {
+  const d = createDb(c.env.DB);
+  const id = c.req.param("id");
+  const existing = await db.getDestination(d, id);
+  if (!existing) throw notFound("Destination not found");
+
+  const failed = await db.getFailedDeliveriesByDestination(d, id, { limit: 1000 });
+
+  // Collect unique event IDs
+  const eventIds = [...new Set(failed.map((f) => f.event_id))];
+  let replayed = 0;
+
+  for (const eventId of eventIds) {
+    const event = await db.getEvent(d, eventId);
+    if (!event) continue;
+
+    await c.env.WEBHOOK_QUEUE.send({
+      eventId: event.id,
+      sourceId: event.source_id,
+      eventType: event.event_type,
+      payloadR2Key: event.payload_r2_key ?? "",
+      headers: event.headers ? JSON.parse(event.headers) : {},
+      receivedAt: new Date().toISOString(),
+    });
+    replayed++;
+  }
+
+  return c.json({
+    message: `Replayed ${replayed} events from ${failed.length} failed deliveries`,
+    replayed,
+    failed_deliveries: failed.length,
+  }, 202);
+});
+
 app.delete("/:id", async (c) => {
   const d = createDb(c.env.DB);
   const id = c.req.param("id");

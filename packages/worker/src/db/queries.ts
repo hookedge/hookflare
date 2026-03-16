@@ -202,3 +202,39 @@ export async function getDeliveriesByEvent(db: DB, eventId: string) {
     .orderBy(asc(deliveries.created_at))
     .all();
 }
+
+export async function getFailedDeliveriesByDestination(
+  db: DB,
+  destinationId: string,
+  opts: { limit?: number; offset?: number } = {},
+) {
+  const limit = opts.limit ?? 100;
+  const offset = opts.offset ?? 0;
+  return db
+    .select()
+    .from(deliveries)
+    .where(
+      and(
+        eq(deliveries.destination_id, destinationId),
+        eq(deliveries.status, "dlq"),
+      ),
+    )
+    .orderBy(desc(deliveries.created_at))
+    .limit(limit)
+    .offset(offset)
+    .all();
+}
+
+export async function countFailedDeliveries(db: DB, destinationId: string) {
+  const result = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(deliveries)
+    .where(
+      and(
+        eq(deliveries.destination_id, destinationId),
+        eq(deliveries.status, "dlq"),
+      ),
+    )
+    .get();
+  return result?.count ?? 0;
+}
