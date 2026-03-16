@@ -2,20 +2,23 @@ import type { Env, DeliveryTask } from "../lib/types";
 import { createDb, updateDelivery } from "../db/queries";
 import { calculateRetryDelay, shouldRetryStatus } from "./retry";
 import type { RetryConfig } from "./retry";
+import { CircuitBreaker } from "./circuit-breaker";
 
 /**
  * DeliveryManager Durable Object
  *
  * One instance per destination. Manages outbound delivery with
- * configurable retry strategies using the Durable Object alarm API.
+ * configurable retry strategies, circuit breaker, and the alarm API.
  */
 export class DeliveryManager implements DurableObject {
   private state: DurableObjectState;
   private env: Env;
+  private circuitBreaker: CircuitBreaker;
 
   constructor(state: DurableObjectState, env: Env) {
     this.state = state;
     this.env = env;
+    this.circuitBreaker = new CircuitBreaker(state.storage);
   }
 
   async fetch(request: Request): Promise<Response> {
@@ -38,6 +41,18 @@ export class DeliveryManager implements DurableObject {
 
   private async attemptDelivery(task: DeliveryTask): Promise<void> {
     const key = `task:${task.deliveryId}`;
+
+    // Circuit breaker check
+    const allowed = await this.circuitBreaker.allowRequest();
+    if (!allowed) {
+      // Circuit is open — schedule retry after recovery timeout
+      const recoveryMs = await this.circuitBreaker.getRecoveryDelayMs();
+      if (recoveryMs !== null && recoveryMs > 0) {
+        await this.state.storage.setAlarm(Date.now() + recoveryMs);
+      }
+      return; // Skip this attempt, will retry when circuit is half-open
+    }
+
     const startTime = Date.now();
 
     try {
@@ -71,7 +86,8 @@ export class DeliveryManager implements DurableObject {
       const responseBody = await response.text().then((t) => t.slice(0, 1024));
 
       if (response.ok) {
-        // Success
+        // Success — reset circuit breaker
+        await this.circuitBreaker.recordSuccess();
         await updateDelivery(createDb(this.env.DB), task.deliveryId, {
           status: "success",
           attempt: task.attempt,
@@ -95,6 +111,8 @@ export class DeliveryManager implements DurableObject {
           return;
         }
 
+        await this.circuitBreaker.recordFailure();
+
         // Check for Retry-After header from destination
         const retryAfter = this.parseRetryAfter(response.headers.get("Retry-After"));
 
@@ -103,6 +121,7 @@ export class DeliveryManager implements DurableObject {
     } catch (err) {
       const latencyMs = Date.now() - startTime;
       const errorMessage = err instanceof Error ? err.message : "Unknown error";
+      await this.circuitBreaker.recordFailure();
       await this.handleFailure(task, 0, latencyMs, errorMessage, null);
     }
   }
