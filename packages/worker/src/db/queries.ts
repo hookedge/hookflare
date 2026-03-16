@@ -151,18 +151,41 @@ export async function getEvent(db: DB, id: string) {
 
 export async function listEvents(
   db: DB,
-  opts: { sourceId?: string; limit?: number; offset?: number } = {},
+  opts: { sourceId?: string; after?: string; limit?: number; offset?: number } = {},
 ) {
   const limit = opts.limit ?? 50;
   const offset = opts.offset ?? 0;
 
-  let query = db.select().from(events).orderBy(desc(events.received_at)).limit(limit).offset(offset);
+  const conditions = [];
+  if (opts.sourceId) conditions.push(eq(events.source_id, opts.sourceId));
+  if (opts.after) conditions.push(sql`${events.received_at} > ${opts.after}`);
 
-  if (opts.sourceId) {
-    query = query.where(eq(events.source_id, opts.sourceId)) as typeof query;
+  let query = db.select().from(events);
+  if (conditions.length > 0) {
+    query = query.where(and(...conditions)) as typeof query;
   }
 
-  return query.all();
+  // When tailing (after is set), sort ascending so newest is last
+  const order = opts.after ? asc(events.received_at) : desc(events.received_at);
+  return query.orderBy(order).limit(limit).offset(offset).all();
+}
+
+export async function listDeliveries(
+  db: DB,
+  opts: { after?: string; destinationId?: string; limit?: number } = {},
+) {
+  const limit = opts.limit ?? 50;
+
+  const conditions = [];
+  if (opts.after) conditions.push(sql`${deliveries.updated_at} > ${opts.after}`);
+  if (opts.destinationId) conditions.push(eq(deliveries.destination_id, opts.destinationId));
+
+  let query = db.select().from(deliveries);
+  if (conditions.length > 0) {
+    query = query.where(and(...conditions)) as typeof query;
+  }
+
+  return query.orderBy(asc(deliveries.updated_at)).limit(limit).all();
 }
 
 // --- Deliveries ---

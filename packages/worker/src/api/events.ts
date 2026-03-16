@@ -8,10 +8,11 @@ const app = new Hono<{ Bindings: Env }>();
 
 app.get("/", async (c) => {
   const sourceId = c.req.query("source_id");
+  const after = c.req.query("after");
   const limit = parseInt(c.req.query("limit") ?? "50", 10);
   const offset = parseInt(c.req.query("offset") ?? "0", 10);
 
-  const events = await db.listEvents(createDb(c.env.DB), { sourceId, limit, offset });
+  const events = await db.listEvents(createDb(c.env.DB), { sourceId, after, limit, offset });
   return c.json({ data: events });
 });
 
@@ -35,6 +36,16 @@ app.get("/:id/deliveries", async (c) => {
   if (!event) throw notFound("Event not found");
 
   const deliveries = await db.getDeliveriesByEvent(createDb(c.env.DB), eventId);
+  return c.json({ data: deliveries });
+});
+
+// List all deliveries (for tailing)
+app.get("/deliveries", async (c) => {
+  const after = c.req.query("after");
+  const destinationId = c.req.query("destination_id");
+  const limit = parseInt(c.req.query("limit") ?? "50", 10);
+
+  const deliveries = await db.listDeliveries(createDb(c.env.DB), { after, destinationId, limit });
   return c.json({ data: deliveries });
 });
 
