@@ -43,7 +43,7 @@ Webhooks are deceptively simple — until they aren't. Providers send them once 
 | Payload archive (R2) | ✅ Stable | Configurable retention |
 | Rate limiting (per-source ingress) | ✅ Stable | KV-based with `X-RateLimit` headers |
 | `hookflare dev` (local tunnel + signature verification) | ✅ Stable | Cloudflare Quick Tunnel, auto-downloads cloudflared |
-| `hookflare connect` (one-shot setup) | 🚧 In progress | [#1](https://github.com/hookedge/hookflare/issues) |
+| `hookflare connect` (one-shot setup) | 🚧 In progress | Source + destination + subscription in one command |
 | `hookflare providers` (provider catalog) | 🚧 In progress | Browse providers and event types |
 | Pre-built providers (Stripe, GitHub, Slack, Shopify, Vercel) | 🚧 In progress | Event catalogs + payload schemas |
 | Dashboard (static SPA) | 📋 Planned | Cloudflare Pages, connects to any instance |
