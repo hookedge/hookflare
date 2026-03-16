@@ -92,3 +92,5 @@ Agent-optimized CLI with:
 - Configuration via `wrangler.jsonc` environment variables and D1 database.
 - Drizzle ORM for all database operations (schema in `src/db/schema.ts`).
 - Atomic commits — each commit should be a single logical change.
+- Changelog follows [Keep a Changelog](https://keepachangelog.com/) format with Added/Changed/Fixed/Security categories.
+- Versioning follows [Semantic Versioning](https://semver.org/). Update CHANGELOG.md when adding features or fixing bugs.
