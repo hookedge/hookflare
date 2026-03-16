@@ -171,8 +171,14 @@ program.exitOverride();
 async function main() {
   try {
     await program.parseAsync(process.argv);
-  } catch (err) {
-    if (err instanceof Error && err.message !== "(outputHelp)") {
+  } catch (err: unknown) {
+    // Commander throws on --help, --version, and validation errors
+    // Check for Commander's exit override errors
+    if (err && typeof err === "object" && "exitCode" in err) {
+      const exitCode = (err as { exitCode: number }).exitCode;
+      process.exit(exitCode);
+    }
+    if (err instanceof Error) {
       outputError(err.message);
       process.exit(1);
     }
