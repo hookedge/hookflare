@@ -17,8 +17,6 @@ hookflare config set api_url http://localhost:8787
 hookflare config set token hf_sk_your_api_key
 ```
 
-Or pass inline: every command respects the configured `api_url` and `token`.
-
 ## Rules
 
 - Always use `--json` flag for machine-readable output
@@ -42,17 +40,55 @@ Or pass inline: every command respects the configured `api_url` and `token`.
 
 ## Common Workflows
 
-### Create a complete webhook pipeline
+### Create a Stripe webhook pipeline
 
 ```bash
-# 1. Create source
-hookflare sources create --json -d '{"name":"stripe","verification":{"type":"hmac-sha256","secret":"whsec_..."}}'
+# 1. Create source with Stripe-native signature verification
+hookflare sources create --json -d '{"name":"stripe","verification":{"type":"stripe","secret":"whsec_..."}}'
+# Output: {"data":{"id":"src_abc123","name":"stripe","verification_type":"stripe",...}}
 
 # 2. Create destination
-hookflare dest create --json -d '{"name":"my-api","url":"https://api.example.com/hooks","retry_policy":{"max_retries":3}}'
+hookflare dest create --json -d '{"name":"my-api","url":"https://api.example.com/hooks","retry_policy":{"strategy":"exponential","max_retries":10}}'
+# Output: {"data":{"id":"dst_def456","name":"my-api","url":"https://api.example.com/hooks",...}}
 
 # 3. Create subscription (use IDs from steps 1 and 2)
-hookflare subs create --json -d '{"source_id":"src_xxx","destination_id":"dst_yyy","event_types":["payment.*"]}'
+hookflare subs create --json -d '{"source_id":"src_abc123","destination_id":"dst_def456","event_types":["payment_intent.*"]}'
+```
+
+### Monitor delivery health
+
+```bash
+# Check destination circuit breaker state
+curl -H "Authorization: Bearer $TOKEN" https://your-hookflare/api/v1/destinations/dst_xxx/circuit
+# Returns: {"state":"closed","failureCount":0,...} or {"state":"open","failureCount":12,...}
+
+# List failed deliveries (DLQ)
+curl -H "Authorization: Bearer $TOKEN" https://your-hookflare/api/v1/destinations/dst_xxx/failed
+# Returns: {"data":[...],"total":5}
+
+# Batch replay all failed deliveries
+curl -X POST -H "Authorization: Bearer $TOKEN" https://your-hookflare/api/v1/destinations/dst_xxx/replay-failed
+```
+
+### Troubleshooting
+
+```bash
+# 1. Webhook not arriving? Check if source exists
+hookflare sources ls --json --fields id,name
+
+# 2. Event received but not delivered? Check subscriptions
+hookflare subs ls --json
+
+# 3. Event delivered but failing? Check delivery log
+hookflare events ls --json --limit 5
+# Then for a specific event:
+curl -H "Authorization: Bearer $TOKEN" https://your-hookflare/api/v1/events/evt_xxx/deliveries
+
+# 4. All deliveries failing? Check circuit breaker
+curl -H "Authorization: Bearer $TOKEN" https://your-hookflare/api/v1/destinations/dst_xxx/circuit
+
+# 5. Too many requests? Check rate limit headers
+# Ingress is limited to 100 req/60s per source. Look for HTTP 429 responses.
 ```
 
 ### Backup and restore
@@ -68,20 +104,17 @@ hookflare import -f backup.json
 hookflare migrate --from http://old:8787 --from-key hf_sk_old --to http://new:8787 --to-key hf_sk_new
 ```
 
-### Check system status
-
-```bash
-hookflare health --json
-hookflare sources ls --json --fields id,name
-hookflare events ls --json --limit 5
-```
-
 ## Error Handling
 
 All errors return structured JSON when `--json` is used:
 
 ```json
 {"success": false, "error": "error message"}
+```
+
+HTTP 429 from ingress endpoint:
+```json
+{"error":{"message":"Rate limit exceeded: 100 requests per 60s","code":"RATE_LIMITED"}}
 ```
 
 Non-zero exit codes indicate failure. Parse stderr for error details.
@@ -94,3 +127,11 @@ Non-zero exit codes indicate failure. Parse stderr for error details.
 - Events: `evt_<hex>`
 - Deliveries: `dlv_<hex>`
 - API Keys: `key_<hex>`
+
+## Verification Types
+
+| Type | Header | Provider |
+|---|---|---|
+| `stripe` | `stripe-signature` | Stripe (t=timestamp,v1=signature format) |
+| `hmac-sha256` | `x-hub-signature-256` | GitHub, generic |
+| `hmac-sha1` | `x-hub-signature` | Legacy providers |

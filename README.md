@@ -11,7 +11,7 @@ Webhooks are deceptively simple — until they aren't. Providers send them once 
 - **Never miss a webhook** — Incoming payloads are immediately queued at the edge before your backend even processes them.
 - **Reliable delivery** — Automatic retries with exponential backoff, configurable per destination.
 - **Idempotency** — Built-in deduplication so duplicate deliveries don't cause duplicate side effects.
-- **Signature verification** — Verify incoming webhook signatures (HMAC-SHA256, etc.) before accepting them.
+- **Signature verification** — Native Stripe, GitHub, and generic HMAC-SHA256 verification built-in.
 - **Delivery logs** — Full audit trail of every attempt, status code, and latency.
 - **One-click deploy** — Click the button above. Cloudflare provisions everything automatically.
 
@@ -58,15 +58,17 @@ Webhook Source                          Your Application
 
 - **Edge ingestion** — Accept webhooks at 300+ global edge locations.
 - **Instant ACK** — Return `202 Accepted` immediately after queuing. Webhook sources never time out.
-- **Signature verification** — Pluggable verifiers for common providers (Stripe, GitHub, Shopify, etc.) and custom HMAC schemes.
+- **Signature verification** — Native Stripe (`t=,v1=` format), GitHub (`x-hub-signature-256`), and generic HMAC schemes.
+- **Rate limiting** — Configurable per-source ingress rate limiting (default 100 req/60s) with `X-RateLimit` headers.
 - **Idempotency** — Automatic deduplication via idempotency keys stored in KV with configurable TTL.
 
 ### Outgoing Delivery
 
 - **Fan-out** — Route one incoming event to multiple destinations based on event type filters.
-- **Exponential backoff** — Configurable retry schedule (e.g., 30s, 2m, 15m, 1h, 4h, 24h).
+- **Configurable retry** — Exponential, linear, or fixed strategy per destination. Respects `Retry-After` headers.
+- **Circuit breaker** — Auto-pauses delivery to unhealthy destinations after consecutive failures, probes for recovery.
 - **Timeout handling** — Configurable per-destination timeout with sensible defaults.
-- **Dead letter queue** — Events that exhaust all retries are moved to a DLQ for manual inspection.
+- **Dead letter queue** — Events that exhaust retries are moved to DLQ. Batch replay with one API call.
 - **Delivery logs** — Every attempt is logged with status code, latency, and response body snippet.
 
 ### Operations
@@ -93,13 +95,16 @@ git clone https://github.com/hookedge/hookflare.git
 cd hookflare
 
 # Install dependencies
-npm install
+pnpm install
+
+# Build shared types
+pnpm --filter @hookflare/shared build
 
 # Run locally
-npm run dev
+pnpm --filter @hookflare/worker dev
 
 # Deploy to Cloudflare
-npm run deploy
+pnpm --filter @hookflare/worker deploy
 ```
 
 ### Send Your First Webhook
@@ -190,6 +195,9 @@ Each destination can override strategy, retry count, interval, and which HTTP st
 | `GET` | `/api/v1/destinations/:id` | Get destination details |
 | `PUT` | `/api/v1/destinations/:id` | Update a destination |
 | `DELETE` | `/api/v1/destinations/:id` | Delete a destination |
+| `GET` | `/api/v1/destinations/:id/circuit` | Circuit breaker state |
+| `GET` | `/api/v1/destinations/:id/failed` | List failed deliveries (DLQ) |
+| `POST` | `/api/v1/destinations/:id/replay-failed` | Batch replay all DLQ events |
 
 ### Subscriptions
 
@@ -208,11 +216,26 @@ Each destination can override strategy, retry count, interval, and which HTTP st
 | `GET` | `/api/v1/events/:id/deliveries` | List delivery attempts for an event |
 | `POST` | `/api/v1/events/:id/replay` | Replay an event to its destinations |
 
+### API Keys
+
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/api/v1/keys` | Create an API key |
+| `GET` | `/api/v1/keys` | List API keys |
+| `DELETE` | `/api/v1/keys/:id` | Revoke an API key |
+
+### Export / Import
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/v1/export` | Export all configuration |
+| `POST` | `/api/v1/import` | Import configuration (dedup by name) |
+
 ### Webhook Ingestion
 
 | Method | Path | Description |
 |---|---|---|
-| `POST` | `/webhooks/:source_id` | Ingest a webhook from a source |
+| `POST` | `/webhooks/:source_id` | Ingest a webhook from a source (public, rate-limited) |
 
 ## CLI
 
