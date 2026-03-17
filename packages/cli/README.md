@@ -74,13 +74,20 @@ hookflare connect stripe \
 Output:
 
 ```
-✓ Source created: src_a1b2c3 (stripe, signature verification enabled)
-✓ Destination created: dst_d4e5f6 (https://api.myapp.com/hooks)
-✓ Subscription created: sub_g7h8i9 (payment_intent.*)
+✓ Connected stripe → https://api.myapp.com/hooks
 
-Webhook URL: https://your-hookflare.workers.dev/webhooks/src_a1b2c3
+  Source:       src_a1b2c3 (stripe)
+  Destination:  dst_d4e5f6 (my-app)
+  Events:       payment_intent.*
 
-Next: Add this URL to your Stripe Dashboard → Developers → Webhooks.
+  Webhook URL:
+    https://your-hookflare.workers.dev/webhooks/src_a1b2c3
+
+  Register this URL with Stripe:
+    CLI:       stripe webhook_endpoints create --url https://your-hookflare.workers.dev/webhooks/src_a1b2c3
+    Dashboard: https://dashboard.stripe.com/webhooks
+               Add the webhook URL as an endpoint in Developers → Webhooks
+    Docs:      https://docs.stripe.com/webhooks
 ```
 
 Omit `--events` to forward all events. hookflare forwards the original payload as-is to your destination with these headers added: `X-Hookflare-Event-Id`, `X-Hookflare-Delivery-Id`, `X-Hookflare-Attempt`.
@@ -115,9 +122,16 @@ hookflare connect stripe --json -d '{...}'             # execute, get JSON outpu
     "destination": { "id": "dst_d4e5f6", "url": "https://api.myapp.com/hooks" },
     "subscription": { "id": "sub_g7h8i9", "event_types": ["payment_intent.*"] },
     "webhook_url": "https://your-hookflare.workers.dev/webhooks/src_a1b2c3"
+  },
+  "next_steps": {
+    "cli": { "binary": "stripe", "args": ["webhook_endpoints", "create", "--url", "https://..."] },
+    "dashboard": { "url": "https://dashboard.stripe.com/webhooks" },
+    "docs_url": "https://docs.stripe.com/webhooks"
   }
 }
 ```
+
+Agents can use `next_steps.cli` to compose with provider CLIs. See [AGENTS.md](https://github.com/hookedge/hookflare/blob/main/packages/cli/AGENTS.md#composing-with-provider-clis) for examples.
 
 Key flags: `--json` (structured output), `--dry-run` (safe validation), `-d/--data` (raw JSON input), `--fields` (limit output columns), `hookflare schema` (API introspection).
 
