@@ -44,7 +44,13 @@ export const github = defineProvider({
   },
 
   nextSteps: {
-    dashboard: "https://github.com/settings/hooks",
+    dashboard: "https://github.com/{owner}/{repo}/settings/hooks",
     instruction: "Go to your repo Settings → Webhooks → Add webhook, paste the webhook URL",
+    docsUrl: "https://docs.github.com/en/webhooks",
+    cli: {
+      binary: "gh",
+      args: ["api", "repos/{owner}/{repo}/hooks", "-f", "url={{webhook_url}}", "-f", "content_type=json"],
+      install: "brew install gh",
+    },
   },
 });

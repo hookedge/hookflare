@@ -32,7 +32,13 @@ export const vercel = defineProvider({
   },
 
   nextSteps: {
-    dashboard: "https://vercel.com/account/webhooks",
-    instruction: "Go to Vercel Account Settings → Webhooks → Create Webhook, paste the URL",
+    dashboard: "https://vercel.com/{team}/~/settings/webhooks",
+    instruction: "Go to Vercel Team Settings → Webhooks → Create Webhook, paste the URL",
+    docsUrl: "https://vercel.com/docs/observability/webhooks",
+    cli: {
+      binary: "vercel",
+      args: ["webhooks", "add", "{{webhook_url}}", "--events", "deployment.created"],
+      install: "npm i -g vercel",
+    },
   },
 });

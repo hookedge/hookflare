@@ -47,5 +47,7 @@ export const slack = defineProvider({
   nextSteps: {
     dashboard: "https://api.slack.com/apps",
     instruction: "Go to your Slack App → Event Subscriptions → paste the webhook URL as Request URL",
+    docsUrl: "https://api.slack.com/apis/events-api",
+    cli: null, // Slack has no CLI for webhook registration
   },
 });

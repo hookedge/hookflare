@@ -68,9 +68,24 @@ export type Presets = Record<string, string[]>;
 
 // --- Next Steps ---
 
+export interface ProviderCli {
+  /** CLI binary name (e.g., "stripe", "gh", "vercel") */
+  binary: string;
+  /** Command args with {{webhook_url}} placeholder */
+  args: string[];
+  /** Install instruction (e.g., "brew install stripe/stripe-cli/stripe") */
+  install?: string;
+}
+
 export interface NextSteps {
+  /** Provider webhook dashboard URL */
   dashboard?: string;
+  /** Human-readable instruction for dashboard setup */
   instruction?: string;
+  /** Provider webhook documentation URL */
+  docsUrl?: string;
+  /** Provider CLI for automated webhook registration (null if no CLI available) */
+  cli?: ProviderCli | null;
 }
 
 // --- Full Provider Definition ---

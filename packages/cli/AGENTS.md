@@ -122,6 +122,47 @@ hookflare import [-f <file>]
 hookflare migrate --from <url> --to <url>
 ```
 
+## Composing with Provider CLIs
+
+hookflare creates the webhook relay. Use the provider's own CLI to register the webhook URL.
+The `--json` output includes `next_steps.cli` with structured args (not a shell string):
+
+```bash
+# Generic pattern: hookflare connect → extract CLI command → execute
+RESULT=$(hookflare connect stripe --secret whsec_xxx --to https://... --json)
+WEBHOOK_URL=$(echo "$RESULT" | jq -r '.data.webhook_url')
+
+# The provider CLI command is in next_steps.cli (structured, not eval-able string)
+BINARY=$(echo "$RESULT" | jq -r '.next_steps.cli.binary')
+# Build args safely (agent should construct subprocess, not eval)
+```
+
+### Stripe + stripe CLI
+
+```bash
+WEBHOOK_URL=$(hookflare connect stripe --secret whsec_xxx --to https://... --json | jq -r '.data.webhook_url')
+stripe webhook_endpoints create --url "$WEBHOOK_URL"
+```
+
+### GitHub + gh CLI
+
+```bash
+WEBHOOK_URL=$(hookflare connect github --secret ghsec_xxx --to https://... --json | jq -r '.data.webhook_url')
+gh api repos/OWNER/REPO/hooks -f url="$WEBHOOK_URL" -f content_type=json
+```
+
+### Slack (no CLI — dashboard only)
+
+```bash
+hookflare connect slack --secret slack_xxx --to https://...
+# Output includes: Dashboard: https://api.slack.com/apps
+# Agent should tell the user to paste the URL manually.
+```
+
+### When `next_steps.cli` is null
+
+The provider has no CLI for webhook registration. Tell the user to configure it manually via the dashboard URL in the output.
+
 ## Common Workflows
 
 ### Local development with real webhooks

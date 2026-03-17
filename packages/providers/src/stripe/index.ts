@@ -50,5 +50,11 @@ export const stripe = defineProvider({
   nextSteps: {
     dashboard: "https://dashboard.stripe.com/webhooks",
     instruction: "Add the webhook URL as an endpoint in Stripe Dashboard → Developers → Webhooks",
+    docsUrl: "https://docs.stripe.com/webhooks",
+    cli: {
+      binary: "stripe",
+      args: ["webhook_endpoints", "create", "--url", "{{webhook_url}}"],
+      install: "brew install stripe/stripe-cli/stripe",
+    },
   },
 });

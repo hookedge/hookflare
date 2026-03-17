@@ -91,12 +91,30 @@ Examples:
       const baseUrl = config.api_url.replace(/\/$/, "");
       const webhookUrl = `${baseUrl}/webhooks/${src.id}`;
 
+      // Build next_steps with resolved {{webhook_url}} placeholder
+      const nextSteps = provider?.nextSteps ?? null;
+      const resolvedCli = nextSteps?.cli
+        ? {
+            ...nextSteps.cli,
+            args: nextSteps.cli.args.map((a: string) => a.replace("{{webhook_url}}", webhookUrl)),
+          }
+        : null;
+
       if (isJsonMode()) {
         output({
-          source: { id: src.id, name: src.name, webhook_url: webhookUrl },
-          destination: { id: dst.id, name: dst.name, url: dst.url },
-          subscription: { id: sub.id, events },
-          next_steps: provider?.nextSteps ?? null,
+          data: {
+            source: { id: src.id, name: src.name, provider: providerArg },
+            destination: { id: dst.id, name: dst.name, url: dst.url },
+            subscription: { id: sub.id, event_types: events },
+            webhook_url: webhookUrl,
+          },
+          next_steps: nextSteps
+            ? {
+                dashboard: nextSteps.dashboard ? { url: nextSteps.dashboard, path: nextSteps.instruction } : undefined,
+                cli: resolvedCli,
+                docs_url: nextSteps.docsUrl,
+              }
+            : null,
         });
       } else {
         outputSuccess(`Connected ${providerArg} → ${opts.to}`);
@@ -104,14 +122,29 @@ Examples:
         console.log(`  Source:       ${src.id} (${src.name})`);
         console.log(`  Destination:  ${dst.id} (${dst.name})`);
         console.log(`  Events:       ${events.join(", ")}`);
-        console.log(`  Webhook URL:  ${webhookUrl}`);
         console.log();
-        if (provider?.nextSteps) {
-          console.log("  Next steps:");
-          if (provider.nextSteps.instruction) console.log(`    ${provider.nextSteps.instruction}`);
-          if (provider.nextSteps.dashboard) console.log(`    Dashboard: ${provider.nextSteps.dashboard}`);
+        console.log(`  Webhook URL:`);
+        console.log(`    ${webhookUrl}`);
+        console.log();
+
+        if (nextSteps) {
+          console.log(`  Register this URL with ${provider?.name ?? providerArg}:`);
+
+          // CLI first if available (user is already in terminal)
+          if (resolvedCli) {
+            console.log(`    CLI:       ${resolvedCli.binary} ${resolvedCli.args.join(" ")}`);
+          }
+          if (nextSteps.dashboard) {
+            console.log(`    Dashboard: ${nextSteps.dashboard}`);
+          }
+          if (nextSteps.instruction) {
+            console.log(`               ${nextSteps.instruction}`);
+          }
+          if (nextSteps.docsUrl) {
+            console.log(`    Docs:      ${nextSteps.docsUrl}`);
+          }
         } else {
-          console.log(`  Next steps: configure your service to send webhooks to the URL above.`);
+          console.log(`  Next: configure your service to send webhooks to the URL above.`);
         }
       }
     } catch (err) {

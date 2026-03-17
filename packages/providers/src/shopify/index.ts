@@ -42,7 +42,13 @@ export const shopify = defineProvider({
   },
 
   nextSteps: {
-    dashboard: "https://admin.shopify.com/settings/notifications",
+    dashboard: "https://admin.shopify.com/store/{store}/settings/notifications",
     instruction: "Go to Shopify Admin → Settings → Notifications → Webhooks, create a webhook with the URL",
+    docsUrl: "https://shopify.dev/docs/apps/build/webhooks",
+    cli: {
+      binary: "shopify",
+      args: ["app", "webhooks", "trigger", "--topic", "orders/create", "--address", "{{webhook_url}}"],
+      install: "npm i -g @shopify/cli",
+    },
   },
 });

@@ -53,7 +53,12 @@ providersCommand
         verification: provider.verification,
         events: provider.events,
         presets: provider.presets,
-        nextSteps: provider.nextSteps,
+        setup: provider.nextSteps ? {
+          dashboard: provider.nextSteps.dashboard,
+          instruction: provider.nextSteps.instruction,
+          docs_url: provider.nextSteps.docsUrl,
+          cli: provider.nextSteps.cli,
+        } : null,
         hasChallenge: !!provider.challenge,
       });
       return;
@@ -95,8 +100,12 @@ providersCommand
 
     if (provider.nextSteps) {
       console.log("Setup:");
+      if (provider.nextSteps.cli) {
+        console.log(`  CLI:       ${provider.nextSteps.cli.binary} ${provider.nextSteps.cli.args.join(" ")}`);
+      }
       if (provider.nextSteps.instruction) console.log(`  ${provider.nextSteps.instruction}`);
       if (provider.nextSteps.dashboard) console.log(`  Dashboard: ${provider.nextSteps.dashboard}`);
+      if (provider.nextSteps.docsUrl) console.log(`  Docs:      ${provider.nextSteps.docsUrl}`);
     }
   });
 
