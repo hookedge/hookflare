@@ -8,7 +8,7 @@
     {
       "binding": "DB",
       "database_name": "hookflare-db",
-      "database_id": "71d99e84-0e61-4a1b-a7be-fe44d0895cdd",
+      "database_id": "YOUR_D1_DATABASE_ID",
       "migrations_dir": "migrations"
     }
   ],
@@ -35,7 +35,7 @@
   "kv_namespaces": [
     {
       "binding": "IDEMPOTENCY_KV",
-      "id": "255464e947de437aa475784b26c90692"
+      "id": "YOUR_KV_NAMESPACE_ID"
     }
   ],
 
